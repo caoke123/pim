@@ -1,0 +1,27 @@
+{
+  "name": "backend",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "drizzle-kit": "drizzle-kit"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.0.0",
+    "@hono/node-server": "^1.0.0",
+    "@yuntu/shared": "workspace:*",
+    "bullmq": "^5.0.0",
+    "dotenv": "^16.0.0",
+    "drizzle-orm": "^0.30.0",
+    "exceljs": "^4.4.0",
+    "hono": "^4.0.0",
+    "ioredis": "^5.0.0",
+    "pg": "^8.11.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/pg": "^8.0.0",
+    "drizzle-kit": "^0.20.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0"
+  }
+}

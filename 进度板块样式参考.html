@@ -1,0 +1,880 @@
+```html
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+<title>Next Gen Linear Dashboard</title>
+
+<style>
+
+:root {
+
+    --transition:
+        cubic-bezier(0.16, 1, 0.3, 1);
+
+    --dark-bg:
+        #030303;
+
+    --dark-grid:
+        rgba(255,255,255,0.05);
+
+    --dark-text:
+        rgba(255,255,255,0.9);
+
+    --dark-soft:
+        rgba(255,255,255,0.4);
+
+    --light-bg:
+        #f4f7fb;
+
+    --light-grid:
+        rgba(15,23,42,0.05);
+
+    --light-text:
+        #0f172a;
+
+    --light-soft:
+        #64748b;
+
+    --cyan:
+        #06b6d4;
+
+    --purple:
+        #8b5cf6;
+
+    --blue:
+        #2563eb;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+
+    margin: 0;
+    padding: 0;
+
+    width: 100vw;
+    height: 100vh;
+
+    overflow: hidden;
+
+    font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        Roboto,
+        sans-serif;
+
+    transition:
+        background .6s var(--transition),
+        color .6s var(--transition);
+}
+
+/* =========================================================
+   THEMES
+========================================================= */
+
+body.dark {
+
+    background:
+        radial-gradient(circle at top left,
+        rgba(139,92,246,.08),
+        transparent 30%),
+        #030303;
+
+    color: white;
+}
+
+body.light {
+
+    background:
+        radial-gradient(circle at top left,
+        rgba(37,99,235,.08),
+        transparent 35%),
+
+        radial-gradient(circle at bottom right,
+        rgba(139,92,246,.08),
+        transparent 35%),
+
+        var(--light-bg);
+
+    color: var(--light-text);
+}
+
+/* =========================================================
+   TOGGLE
+========================================================= */
+
+.theme-toggle {
+
+    position: fixed;
+
+    top: 24px;
+    right: 24px;
+
+    z-index: 999;
+
+    border-radius: 999px;
+
+    padding: 12px 22px;
+
+    border: 1px solid;
+
+    cursor: pointer;
+
+    font-size: 12px;
+    font-weight: 700;
+
+    letter-spacing: 1px;
+
+    transition: all .4s var(--transition);
+}
+
+body.dark .theme-toggle {
+
+    background: #111;
+
+    color: white;
+
+    border-color:
+        rgba(255,255,255,.08);
+
+    box-shadow:
+        0 10px 40px rgba(0,0,0,.55);
+}
+
+body.light .theme-toggle {
+
+    background:
+        rgba(255,255,255,.8);
+
+    color:
+        var(--light-text);
+
+    border-color:
+        rgba(255,255,255,.8);
+
+    backdrop-filter:
+        blur(20px);
+
+    box-shadow:
+        0 20px 60px rgba(15,23,42,.08);
+}
+
+/* =========================================================
+   WORKSPACE
+========================================================= */
+
+.workspace {
+
+    position: relative;
+
+    width: 100%;
+    max-width: 1000px;
+
+    height: 540px;
+
+    margin: auto;
+
+    top: 50%;
+
+    transform:
+        translateY(-50%);
+}
+
+/* =========================================================
+   GRID
+========================================================= */
+
+.grid {
+
+    position: absolute;
+
+    inset: 0;
+
+    background-size:
+        40px 40px;
+
+    mask-image:
+        radial-gradient(circle, black 45%, transparent 85%);
+
+    -webkit-mask-image:
+        radial-gradient(circle, black 45%, transparent 85%);
+}
+
+body.dark .grid {
+
+    background-image:
+        linear-gradient(var(--dark-grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--dark-grid) 1px, transparent 1px);
+}
+
+body.light .grid {
+
+    background-image:
+        linear-gradient(var(--light-grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--light-grid) 1px, transparent 1px);
+}
+
+/* =========================================================
+   HEADER
+========================================================= */
+
+.header {
+
+    position: absolute;
+
+    top: 40px;
+    left: 40px;
+
+    z-index: 2;
+}
+
+.header h1 {
+
+    margin: 0;
+
+    font-size: 22px;
+    font-weight: 700;
+
+    letter-spacing: -.5px;
+}
+
+.header p {
+
+    margin-top: 10px;
+
+    font-size: 12px;
+
+    font-family: monospace;
+}
+
+body.dark .header p {
+    color: var(--dark-soft);
+}
+
+body.light .header p {
+    color: var(--light-soft);
+}
+
+/* =========================================================
+   FLOAT CARD
+========================================================= */
+
+.float-card {
+
+    position: absolute;
+
+    top: 50px;
+    right: 40px;
+
+    width: 250px;
+
+    padding: 22px;
+
+    border-radius: 24px;
+
+    z-index: 3;
+
+    transition: all .5s var(--transition);
+}
+
+body.dark .float-card {
+
+    background:
+        rgba(255,255,255,.03);
+
+    border:
+        1px solid rgba(255,255,255,.05);
+
+    backdrop-filter:
+        blur(18px);
+
+    box-shadow:
+        0 20px 60px rgba(0,0,0,.35);
+}
+
+body.light .float-card {
+
+    background:
+        rgba(255,255,255,.6);
+
+    border:
+        1px solid rgba(255,255,255,.8);
+
+    backdrop-filter:
+        blur(24px);
+
+    box-shadow:
+        0 20px 60px rgba(15,23,42,.06);
+}
+
+.float-card h3 {
+
+    margin: 0;
+
+    font-size: 14px;
+}
+
+.float-card p {
+
+    margin-top: 12px;
+
+    font-size: 12px;
+
+    line-height: 1.8;
+}
+
+body.dark .float-card p {
+    color: var(--dark-soft);
+}
+
+body.light .float-card p {
+    color: var(--light-soft);
+}
+
+/* =========================================================
+   TERMINAL STREAM
+========================================================= */
+
+.terminal-stream {
+
+    position: absolute;
+
+    top: 140px;
+    left: 80px;
+
+    width: calc(100% - 160px);
+
+    height: 180px;
+
+    overflow: hidden;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+
+    font-family: monospace;
+    font-size: 12px;
+
+    mask-image:
+        linear-gradient(to top, black 30%, transparent 100%);
+}
+
+body.dark .terminal-stream {
+    color: rgba(255,255,255,.45);
+}
+
+body.light .terminal-stream {
+    color: rgba(15,23,42,.55);
+}
+
+.stream-line {
+
+    opacity: 0;
+
+    line-height: 1.9;
+
+    transform: translateY(20px);
+
+    animation:
+        fadeUp .35s forwards;
+}
+
+.stream-line span {
+
+    color: var(--cyan);
+
+    font-weight: bold;
+}
+
+@keyframes fadeUp {
+
+    to {
+
+        opacity: 1;
+
+        transform: translateY(0);
+    }
+}
+
+/* =========================================================
+   HORIZON AXIS
+========================================================= */
+
+.horizon {
+
+    position: absolute;
+
+    width: 90%;
+
+    left: 5%;
+    top: 66%;
+
+    height: 2px;
+
+    background:
+        linear-gradient(
+            90deg,
+            transparent,
+            var(--cyan),
+            var(--purple),
+            transparent
+        );
+
+    transition: all .4s ease;
+}
+
+body.dark .horizon {
+
+    box-shadow:
+        0 0 30px rgba(139,92,246,.45);
+}
+
+body.light .horizon {
+
+    box-shadow:
+        0 0 20px rgba(37,99,235,.18);
+}
+
+/* =========================================================
+   CORE
+========================================================= */
+
+.core {
+
+    position: absolute;
+
+    top: 50%;
+    left: 0%;
+
+    transform:
+        translate(-50%, -50%);
+
+    width: 12px;
+    height: 12px;
+
+    border-radius: 50%;
+
+    transition:
+        left .1s linear;
+}
+
+body.dark .core {
+
+    background: white;
+
+    box-shadow:
+        0 0 25px white,
+        0 0 60px var(--cyan);
+}
+
+body.light .core {
+
+    background: white;
+
+    border:
+        2px solid rgba(255,255,255,.8);
+
+    box-shadow:
+        0 0 20px rgba(37,99,235,.35),
+        0 0 60px rgba(139,92,246,.2);
+}
+
+/* =========================================================
+   METRICS
+========================================================= */
+
+.metrics {
+
+    position: absolute;
+
+    bottom: 60px;
+    left: 80px;
+
+    width: calc(100% - 160px);
+
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+}
+
+/* BIG NUMBER */
+
+.progress {
+
+    font-size: 64px;
+
+    font-weight: 200;
+
+    letter-spacing: -3px;
+}
+
+body.dark .progress {
+
+    background:
+        linear-gradient(
+            180deg,
+            #ffffff 20%,
+            #444 100%
+        );
+
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+body.light .progress {
+
+    background:
+        linear-gradient(
+            180deg,
+            #0f172a 20%,
+            #64748b 100%
+        );
+
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* STATUS */
+
+.status {
+
+    width: 260px;
+
+    border-radius: 20px;
+
+    padding: 18px 20px;
+
+    transition: all .5s ease;
+}
+
+body.dark .status {
+
+    background:
+        rgba(255,255,255,.03);
+
+    border:
+        1px solid rgba(255,255,255,.05);
+
+    backdrop-filter:
+        blur(18px);
+}
+
+body.light .status {
+
+    background:
+        rgba(255,255,255,.6);
+
+    border:
+        1px solid rgba(255,255,255,.8);
+
+    backdrop-filter:
+        blur(20px);
+
+    box-shadow:
+        0 20px 50px rgba(15,23,42,.06);
+}
+
+.status-item {
+
+    display: flex;
+    justify-content: space-between;
+
+    font-size: 12px;
+
+    font-family: monospace;
+
+    margin-bottom: 12px;
+}
+
+.status-item:last-child {
+    margin-bottom: 0;
+}
+
+body.dark .status-item {
+
+    color:
+        rgba(255,255,255,.5);
+}
+
+body.light .status-item {
+
+    color:
+        var(--light-soft);
+}
+
+.status-item strong {
+
+    color: inherit;
+
+    font-weight: 700;
+}
+
+/* =========================================================
+   BRAND
+========================================================= */
+
+.brand {
+
+    position: absolute;
+
+    top: 40px;
+    right: 340px;
+
+    font-size: 11px;
+
+    letter-spacing: 2px;
+
+    font-weight: 700;
+}
+
+body.dark .brand {
+
+    color:
+        rgba(255,255,255,.25);
+}
+
+body.light .brand {
+
+    color:
+        rgba(15,23,42,.25);
+}
+
+</style>
+</head>
+
+<body class="dark">
+
+<button class="theme-toggle" onclick="toggleTheme()">
+    SWITCH TO LIGHT
+</button>
+
+<div class="workspace">
+
+    <div class="grid"></div>
+
+    <!-- Brand -->
+    <div class="brand">
+        LINEAR • TERMINAL
+    </div>
+
+    <!-- Header -->
+    <div class="header">
+
+        <h1>
+            [SYSTEM] Initializing distributed prism engine...
+        </h1>
+
+        <p>
+            REGION → ap-northeast-1.quantum.edge
+        </p>
+
+    </div>
+
+    <!-- Float Card -->
+    <div class="float-card">
+
+        <h3>
+            Pipeline Sync Active
+        </h3>
+
+        <p>
+            Edge worker topology synchronized with
+            encrypted orchestration relay network.
+        </p>
+
+    </div>
+
+    <!-- Terminal -->
+    <div
+        class="terminal-stream"
+        id="terminalStream">
+    </div>
+
+    <!-- Horizon -->
+    <div class="horizon">
+
+        <div
+            class="core"
+            id="core">
+        </div>
+
+    </div>
+
+    <!-- Metrics -->
+    <div class="metrics">
+
+        <div
+            class="progress"
+            id="progressText">
+            00%
+        </div>
+
+        <div class="status">
+
+            <div class="status-item">
+                <span>Cluster</span>
+                <strong>READY</strong>
+            </div>
+
+            <div class="status-item">
+                <span>Relay</span>
+                <strong>ACTIVE</strong>
+            </div>
+
+            <div class="status-item">
+                <span>Security</span>
+                <strong>SYNCED</strong>
+            </div>
+
+            <div class="status-item">
+                <span>Global CDN</span>
+                <strong>ONLINE</strong>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+
+const tasks = [
+
+    "Compiling distributed prism nodes...",
+    "Injecting cryptographic edge layers...",
+    "Validating relay synchronization...",
+    "Allocating memory worker shards...",
+    "Securing quantum webhook routes...",
+    "Optimizing global cache topology...",
+    "Finalizing orchestration matrix..."
+];
+
+let progress = 0;
+
+let dark = true;
+
+/* =========================================================
+   LOOP
+========================================================= */
+
+function engineLoop() {
+
+    progress += Math.random() * 2.8 + .4;
+
+    if(progress > 100) {
+
+        progress = 0;
+
+        document
+            .getElementById("terminalStream")
+            .innerHTML = "";
+    }
+
+    /* CORE */
+
+    document
+        .getElementById("core")
+        .style.left =
+        progress + "%";
+
+    /* TEXT */
+
+    document
+        .getElementById("progressText")
+        .innerText =
+        Math.floor(progress)
+        .toString()
+        .padStart(2, "0") + "%";
+
+    /* STREAM */
+
+    if(Math.random() > .58) {
+
+        const stream =
+            document.getElementById("terminalStream");
+
+        const line =
+            document.createElement("div");
+
+        line.className =
+            "stream-line";
+
+        const hex =
+            Math.floor(Math.random() * 999999)
+            .toString(16)
+            .toUpperCase();
+
+        const task =
+            tasks[
+                Math.floor(
+                    Math.random() * tasks.length
+                )
+            ];
+
+        line.innerHTML =
+            `<span>[0x${hex}]</span> ${task}`;
+
+        stream.appendChild(line);
+
+        if(stream.children.length > 7) {
+
+            stream.removeChild(stream.firstChild);
+        }
+    }
+
+    setTimeout(engineLoop, 240);
+}
+
+/* =========================================================
+   THEME
+========================================================= */
+
+function toggleTheme() {
+
+    const body =
+        document.body;
+
+    const btn =
+        document.querySelector(".theme-toggle");
+
+    dark = !dark;
+
+    if(dark) {
+
+        body.classList.remove("light");
+
+        body.classList.add("dark");
+
+        btn.innerText =
+            "SWITCH TO LIGHT";
+
+    } else {
+
+        body.classList.remove("dark");
+
+        body.classList.add("light");
+
+        btn.innerText =
+            "SWITCH TO DARK";
+    }
+}
+
+/* =========================================================
+   START
+========================================================= */
+
+engineLoop();
+
+</script>
+
+</body>
+</html>
+```

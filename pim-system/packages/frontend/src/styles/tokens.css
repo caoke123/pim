@@ -1,0 +1,132 @@
+/* src/styles/tokens.css — PIM Design System CSS Custom Properties */
+
+/* ================================================================
+   浅色模式 — Stripe Dashboard / Linear Light
+   ================================================================ */
+:root, [data-theme="light"] {
+  --bg-base:        #FFFFFF;
+  --bg-surface:     #F6F9FC;
+  --bg-elevated:    #FFFFFF;
+  --bg-subtle:      rgba(0,0,0,0.02);
+  --bg-hover:       rgba(0,0,0,0.02);
+
+  --glass:          rgba(255,255,255,0.72);
+  --glass-border:   rgba(255,255,255,0.65);
+  --glass-shadow:   -8px 0 40px rgba(15,23,42,0.12);
+  --glass-blur:     blur(24px) saturate(180%);
+
+  --text-primary:   #0A2540;
+  --text-secondary: #425466;
+  --text-tertiary:  #8898AA;
+  --text-inverse:   #FFFFFF;
+
+  --accent:         #635BFF;
+  --accent-hover:   #4F46E5;
+  --accent-soft:    rgba(99,91,255,0.08);
+  --accent-glow:    0 0 0 3px rgba(99,91,255,0.12);
+
+  --border-default: rgba(0,0,0,0.08);
+  --border-strong:  rgba(0,0,0,0.16);
+  --border-soft:    rgba(0,0,0,0.04);
+
+  --input:          rgba(255,255,255,0.48);
+  --input-focus:    rgba(255,255,255,0.72);
+
+  --overlay:        rgba(15,23,42,0.12);
+
+  --shadow-sm:      0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md:      0 4px 12px rgba(0,0,0,0.08);
+  --shadow-lg:      0 8px 24px rgba(0,0,0,0.10);
+
+  --success:        #09825D;
+  --success-bg:     #D3F8EE;
+  --warning:        #B54708;
+  --warning-bg:     #FEF0C7;
+  --danger:         #C01048;
+  --danger-bg:      #FFE4E8;
+  --info:           #0369A1;
+  --info-bg:        #E0F2FE;
+
+  --status-live:    #09825D;
+  --status-pending: #B54708;
+  --status-idle:    #8898AA;
+  --status-error:   #C01048;
+
+  --sidebar-bg:     #f4f5f9;
+  --sidebar-text:   #1a1f3a;
+  --sidebar-text-hover: var(--accent);
+  --sidebar-text-active: var(--accent);
+  --sidebar-border: #e5e8f0;
+  --sidebar-active-bg: rgba(99,91,255,0.08);
+}
+
+/* ================================================================
+   深色模式 — Linear / Raycast / Vercel / Arc Browser
+
+   Dark ≠ Color Inversion. Dark = Entire Visual Physics Changes.
+   ================================================================ */
+[data-theme="dark"] {
+  /* Precision dark base — near-pure black with faint blue tint */
+  --bg-base:        #010102;
+  --bg-surface:     #0f1011;
+  --bg-elevated:    #141516;
+  --bg-subtle:      rgba(255,255,255,0.03);
+  --bg-hover:       rgba(255,255,255,0.05);
+
+  /* Glassmorphism — slightly lighter, transparent overlay */
+  --glass:          rgba(13,15,20,0.82);
+  --glass-border:   rgba(255,255,255,0.06);
+  --glass-shadow:   -8px 0 40px rgba(0,0,0,0.5);
+  --glass-blur:     blur(24px) saturate(180%);
+
+  /* Text — high contrast but never pure white */
+  --text-primary:   #F0F0F5;
+  --text-secondary: #9899A6;
+  --text-tertiary:  #5C5D6E;
+  --text-inverse:   #010102;
+
+  /* Linear Lavender Accent — used sparingly */
+  --accent:         #5e6ad2;
+  --accent-hover:   #828fff;
+  --accent-soft:    rgba(94,106,210,0.12);
+  --accent-glow:    0 0 0 3px rgba(94,106,210,0.15);
+
+  /* Borders — hairline hierarchy, no shadows */
+  --border-default: rgba(255,255,255,0.06);
+  --border-strong:  rgba(255,255,255,0.14);
+  --border-soft:    rgba(255,255,255,0.03);
+
+  /* Input — transparent mesh */
+  --input:          rgba(255,255,255,0.04);
+  --input-focus:    rgba(255,255,255,0.08);
+
+  --overlay:        rgba(15,23,42,0.12);
+
+  /* Depth in dark: borders carry hierarchy, not shadows */
+  --shadow-sm:      none;
+  --shadow-md:      none;
+  --shadow-lg:      none;
+
+  /* Status — desaturated for dark immersion */
+  --success:        #34C78A;
+  --success-bg:     rgba(52,199,138,0.1);
+  --warning:        #F59E0B;
+  --warning-bg:     rgba(245,158,11,0.1);
+  --danger:         #F87171;
+  --danger-bg:      rgba(248,113,113,0.1);
+  --info:           #60A5FA;
+  --info-bg:        rgba(96,165,250,0.1);
+
+  --status-live:    #34C78A;
+  --status-pending: #F59E0B;
+  --status-idle:    #5C5D6E;
+  --status-error:   #F87171;
+
+  /* Sidebar — melts into base canvas */
+  --sidebar-bg:     #010102;
+  --sidebar-text:   rgba(255,255,255,0.65);
+  --sidebar-text-hover: rgba(255,255,255,0.9);
+  --sidebar-text-active: #F0F0F5;
+  --sidebar-border: rgba(255,255,255,0.04);
+  --sidebar-active-bg: rgba(94,106,210,0.12);
+}
