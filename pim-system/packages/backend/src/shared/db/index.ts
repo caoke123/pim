@@ -1,0 +1,12 @@
+/** shared/db/index.ts — 数据库连接 (保留原有实现) */
+
+import { drizzle } from 'drizzle-orm/node-postgres'
+import { Pool } from 'pg'
+import * as schema from './schema'
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+})
+
+export const db = drizzle(pool, { schema })
+export { schema }

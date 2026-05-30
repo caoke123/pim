@@ -1,10 +1,12 @@
-/** packages/backend/src/routes/stats.ts — 统计相关路由 */
+/** routes/stats.ts — 统计路由 (基于真实DB) */
 
 import { Hono } from 'hono'
-import { eq, desc, count, sql } from 'drizzle-orm'
-import { db } from '../db'
-import { products, syncLogs, productPlatforms } from '../db/schema'
-import type { ApiResponse } from '@yuntu/shared'
+import { count } from 'drizzle-orm'
+import { db, schema } from '../shared/db'
+import { publishTasksRepository } from '../repositories/publish-tasks.repository'
+import { ok, serverError } from '../shared/utils'
+
+const { products } = schema
 
 const statsApp = new Hono()
 
@@ -16,67 +18,62 @@ statsApp.get('/overview', async (c) => {
     const [totalResult] = await db.select({ count: count() }).from(products)
     const totalProducts = totalResult?.count ?? 0
 
-    // 各状态数量
-    const [pendingResult] = await db
-      .select({ count: count() })
+    // 各状态统计
+    const statusRows = await db
+      .select({ status: products.status, cnt: count() })
       .from(products)
-      .where(eq(products.status, 'pending'))
-    const [activeResult] = await db
-      .select({ count: count() })
+      .groupBy(products.status)
+
+    const statusMap: Record<string, number> = {}
+    for (const row of statusRows) {
+      statusMap[row.status] = row.cnt
+    }
+
+    const readyProducts = statusMap['ready'] ?? 0
+    const activeProducts = statusMap['active'] ?? 0
+    const pendingProducts = statusMap['pending'] ?? 0
+
+    // 失败发布任务数
+    let failedPublishTasks = 0
+    try {
+      failedPublishTasks = await publishTasksRepository.countFailed()
+    } catch {
+      failedPublishTasks = 0
+    }
+
+    // 平台统计: 从 platforms_json 提取
+    const allProducts = await db
+      .select({ platformsJson: products.platformsJson })
       .from(products)
-      .where(eq(products.status, 'active'))
 
-    // 最后同步时间（从 sync_logs 取最近一条 done 记录）
-    const [lastSync] = await db
-      .select({ completedAt: syncLogs.completedAt })
-      .from(syncLogs)
-      .where(eq(syncLogs.status, 'done'))
-      .orderBy(desc(syncLogs.completedAt))
-      .limit(1)
-
-    // 各平台导出统计（从 product_platforms 按 export_status='exported' 计数）
-    const platforms = ['shopee', 'temu', 'miaoshou'] as const
-    const exportStats: Record<string, { total: number; lastExportedAt: string | null }> = {}
-
-    for (const platform of platforms) {
-      const [totalResult] = await db
-        .select({ count: count() })
-        .from(productPlatforms)
-        .where(eq(productPlatforms.platform, platform))
-
-      const [lastExport] = await db
-        .select({ lastExportedAt: productPlatforms.lastExportedAt })
-        .from(productPlatforms)
-        .where(eq(productPlatforms.platform, platform))
-        .orderBy(desc(productPlatforms.lastExportedAt))
-        .limit(1)
-
-      exportStats[platform] = {
-        total: totalResult?.count ?? 0,
-        lastExportedAt: lastExport?.lastExportedAt?.toISOString() ?? null,
+    const platformStats: Record<string, { total: number; lastExportedAt: string | null }> = {}
+    for (const p of allProducts) {
+      if (p.platformsJson && typeof p.platformsJson === 'object') {
+        const json = p.platformsJson as Record<string, unknown>
+        for (const key of Object.keys(json)) {
+          if (!platformStats[key]) {
+            platformStats[key] = { total: 0, lastExportedAt: null }
+          }
+          platformStats[key].total++
+        }
       }
     }
 
-    const response: ApiResponse<{
-      totalProducts: number
-      pendingProducts: number
-      activeProducts: number
-      lastSyncedAt: string | null
-      exportStats: Record<string, { total: number; lastExportedAt: string | null }>
-    }> = {
-      data: {
-        totalProducts,
-        pendingProducts: pendingResult?.count ?? 0,
-        activeProducts: activeResult?.count ?? 0,
-        lastSyncedAt: lastSync?.completedAt?.toISOString() ?? null,
-        exportStats,
-      },
-    }
-
-    return c.json(response)
+    return ok(c, {
+      totalProducts,
+      readyProducts,
+      activeProducts,
+      pendingProducts,
+      failedPublishTasks,
+      lastSyncedAt: null,
+      platformStats: Object.entries(platformStats).map(([platform, stats]) => ({
+        platform,
+        total: stats.total,
+        lastExportedAt: stats.lastExportedAt,
+      })),
+    })
   } catch (error) {
-    console.error('获取概览统计失败:', error)
-    return c.json({ data: null, error: '获取概览统计失败' }, 500)
+    return serverError(c, error)
   }
 })
 

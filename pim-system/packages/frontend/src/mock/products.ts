@@ -1,6 +1,7 @@
 export interface PlatformStatus { name: 'Shopee' | 'TikTok' | 'Lazada' | 'Amazon'; status: 'live' | 'pending' | 'idle' | 'error'; itemId?: string; publishedAt?: string }
-export interface SkuItem { code: string; color: string; dimensions: string; weight: string; stock: number; cost: number; price: number }
+export interface SkuItem { id?: string; code: string; color: string; nameEn?: string; dimensions: string; weight: string; weightG?: number; size?: { length: number; width: number; height: number; unit: string }; stock: number; cost: number; price: number; imageUrl?: string }
 export interface Product {
+  id?: string
   spuCode: string
   spuName: string
   category: string
