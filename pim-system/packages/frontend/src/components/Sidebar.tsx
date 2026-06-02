@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Package, Radio, BookOpen, ScrollText, Settings } from 'lucide-react'
+import { LayoutDashboard, Package, Radio, BookOpen, ScrollText, Settings, Users } from 'lucide-react'
 import ThemeToggle from './ThemeToggle'
 
 interface SidebarProps { theme: 'light' | 'dark'; onToggleTheme: () => void }
@@ -9,6 +9,7 @@ const navItems = [
   { to: '/products', icon: Package, label: '产品库' },
   { to: '/publish', icon: Radio, label: '发布中心' },
   { to: '/catalog', icon: BookOpen, label: '产品图册' },
+  { to: '/distributions', icon: Users, label: '分销管理' },
   { to: '/logs', icon: ScrollText, label: '日志中心' },
   { to: '/settings', icon: Settings, label: '系统设置' },
 ]

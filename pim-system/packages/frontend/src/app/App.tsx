@@ -10,6 +10,7 @@ import PublishCenter from '@/pages/PublishCenter'
 import Catalog from '@/pages/Catalog'
 import Logs from '@/pages/Logs'
 import Settings from '@/pages/Settings'
+import Distributions from '@/pages/Distributions'
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 30_000, retry: 1 } } })
 
@@ -29,6 +30,7 @@ export default function App() {
               <Route path="/products" element={<Products />} />
               <Route path="/publish" element={<PublishCenter />} />
               <Route path="/catalog" element={<Catalog />} />
+              <Route path="/distributions" element={<Distributions />} />
               <Route path="/logs" element={<Logs />} />
               <Route path="/settings" element={<Settings />} />
             </Routes>

@@ -14,6 +14,7 @@ import {
   smallint,
   bigint,
   pgEnum,
+  unique,
   uniqueIndex,
   index,
 } from 'drizzle-orm/pg-core'
@@ -232,4 +233,48 @@ export const catalogs = pgTable('catalogs', {
 }, (table) => ({
   statusIdx: index('idx_catalogs_status').on(table.status),
   createdIdx: index('idx_catalogs_created').on(table.createdAt),
+}))
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 分销管理
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export const customers = pgTable('customers', {
+  id: uuid('id').primaryKey().defaultRandom().notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  contactPerson: varchar('contact_person', { length: 100 }),
+  phone: varchar('phone', { length: 50 }),
+  wechat: varchar('wechat', { length: 100 }),
+  notes: text('notes'),
+  status: varchar('status', { length: 20 }).notNull().default('active'),
+  operator: varchar('operator', { length: 50 }).default('XP'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  statusIdx: index('idx_customers_status').on(table.status),
+  createdIdx: index('idx_customers_created').on(table.createdAt),
+}))
+
+export const distributions = pgTable('distributions', {
+  id: uuid('id').primaryKey().defaultRandom().notNull(),
+  customerId: uuid('customer_id').notNull().references(() => customers.id, { onDelete: 'cascade' }),
+  catalogId: uuid('catalog_id').notNull().references(() => catalogs.id, { onDelete: 'restrict' }),
+  agreement: text('agreement'),
+  status: varchar('status', { length: 20 }).notNull().default('active'),
+  publicUrl: text('public_url'),
+  operator: varchar('operator', { length: 50 }).default('XP'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+})
+
+export const distributionSkuPrices = pgTable('distribution_sku_prices', {
+  id: uuid('id').primaryKey().defaultRandom().notNull(),
+  distributionId: uuid('distribution_id').notNull().references(() => distributions.id, { onDelete: 'cascade' }),
+  skuId: uuid('sku_id').notNull().references(() => productSkus.id, { onDelete: 'cascade' }),
+  spuCode: varchar('spu_code', { length: 100 }).notNull(),
+  customerPrice: numeric('customer_price', { precision: 10, scale: 2 }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  uniq: unique().on(table.distributionId, table.skuId),
 }))

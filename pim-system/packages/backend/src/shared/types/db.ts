@@ -9,6 +9,9 @@ import type {
   publishLogs,
   pimPublishTasks,
   catalogs,
+  customers,
+  distributions,
+  distributionSkuPrices,
 } from '../db/schema'
 
 // ── 产品主表 ──
@@ -36,6 +39,14 @@ export type PublishTaskInsert = typeof pimPublishTasks.$inferInsert
 // ── 图册表 ──
 export type CatalogRow = typeof catalogs.$inferSelect
 export type CatalogInsert = typeof catalogs.$inferInsert
+
+// ── 分销管理 ──
+export type CustomerRow = typeof customers.$inferSelect
+export type CustomerInsert = typeof customers.$inferInsert
+export type DistributionRow = typeof distributions.$inferSelect
+export type DistributionInsert = typeof distributions.$inferInsert
+export type DistributionSkuPriceRow = typeof distributionSkuPrices.$inferSelect
+export type DistributionSkuPriceInsert = typeof distributionSkuPrices.$inferInsert
 
 // ── Insert 类型 ──
 export type ProductInsert = typeof products.$inferInsert

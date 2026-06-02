@@ -13,6 +13,7 @@ import { productsRoutesV3 } from './modules/products'
 import { publishRoutes } from './modules/publish'
 import { logsRoutes } from './modules/logs/logs.routes'
 import { catalogsRoutes } from './modules/catalogs'
+import { distributionsModule } from './modules/distributions'
 import { requestIdMiddleware } from './shared/utils'
 import { globalErrorHandler } from './shared/middleware'
 import { logger } from './shared/utils/logger'
@@ -41,6 +42,7 @@ app.route('/api/v1/products', productsRoutesV3)
 app.route('/api/v1/publish', publishRoutes)
 app.route('/api/v1/logs', logsRoutes)
 app.route('/api/v1/catalogs', catalogsRoutes)
+app.route('/api/v1/distributions', distributionsModule)
 app.route('/api/v1/sync', syncRoutes)
 app.route('/api/v1/exports', exportsRoutes)
 app.route('/api/v1/distributors', distributorsRoutes)

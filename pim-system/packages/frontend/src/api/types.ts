@@ -107,3 +107,90 @@ export interface StatsOverview {
   lastSyncedAt: string | null
   platformStats: { platform: string; total: number; lastExportedAt: string | null }[]
 }
+
+// ── 后端实际响应包装 ──
+
+export interface ApiEnvelope<T> {
+  code: number
+  message: string
+  data: T
+}
+
+// ── 图册 ──
+
+export interface CatalogListItem {
+  id: string
+  name: string
+  description: string | null
+  coverImageUrl: string | null
+  productCount: number
+  status: 'draft' | 'published' | 'archived'
+  publicUrl: string | null
+  viewCount: number
+  lastViewedAt: string | null
+  publishedAt: string | null
+  operator: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+// ── 分销管理 ──
+
+export interface CustomerListItem {
+  id: string
+  name: string
+  contactPerson: string | null
+  phone: string | null
+  wechat: string | null
+  notes: string | null
+  status: string
+  operator: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface DistributionListItem {
+  id: string
+  customerId: string
+  customerName: string
+  catalogId: string
+  catalogName: string
+  catalogCoverImageUrl: string | null
+  productCount: number
+  status: string
+  publicUrl: string | null
+  operator: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface DistributionSkuItem {
+  skuId: string
+  spuCode: string
+  productId: string
+  productTitle: string
+  productImage: string | null
+  skuCode: string
+  specs: string
+  basePrice: number | null
+  customerPrice: number | null
+  priceId: string | null
+}
+
+export interface DistributionDetail {
+  id: string
+  customerId: string
+  customerName: string
+  customerContactPerson: string | null
+  customerPhone: string | null
+  customerWechat: string | null
+  catalogId: string
+  catalogName: string
+  agreement: string | null
+  status: string
+  publicUrl: string | null
+  operator: string | null
+  createdAt: string
+  updatedAt: string
+  skus: DistributionSkuItem[]
+}
