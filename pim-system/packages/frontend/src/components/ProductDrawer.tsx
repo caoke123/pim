@@ -66,7 +66,7 @@ export default function ProductDrawer({ open, product, products, onClose, onNavi
                   <h2 className="text-[17px] font-semibold tracking-tight truncate max-w-[360px]" style={{ color: 'var(--text-primary)' }}>
                     {product.spuName}
                   </h2>
-                  <span className="text-[11px] font-mono" style={{ color: 'var(--text-tertiary)' }}>{product.spuCode}</span>
+                  <span className="text-[12px] font-mono" style={{ color: 'var(--text-tertiary)' }}>{product.spuCode}</span>
                 </div>
               </div>
               <div className="flex items-center gap-1">
@@ -179,12 +179,12 @@ function TranslationBlock({ label, enValue, zhDefault, multiline, expanded, onTo
 }) {
   return (
     <div>
-      <span className="text-[10px] mb-2 block font-medium" style={{ color: 'var(--text-tertiary)' }}>{label}</span>
-      <div className="rounded-lg p-3.5 text-[12px] leading-relaxed mb-3"
+      <span className="text-[12px] mb-2 block font-medium" style={{ color: 'var(--text-tertiary)' }}>{label}</span>
+      <div className="rounded-lg p-3.5 text-[14px] leading-relaxed mb-3"
         style={{ backgroundColor: 'var(--input)', color: 'var(--text-tertiary)' }}>
         <p className={expanded === false ? 'line-clamp-3' : ''}>{enValue}</p>
         {onToggleExpand && (
-          <button onClick={onToggleExpand} className="text-[10px] mt-1.5 flex items-center gap-1 font-medium"
+          <button onClick={onToggleExpand} className="text-[12px] mt-1.5 flex items-center gap-1 font-medium"
             style={{ color: 'var(--accent)' }}>
             {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
             {expanded ? '收起' : '展开全部'}
@@ -291,51 +291,51 @@ function SkuTab({ product, onRefresh }: { product: Product; onRefresh?: () => Pr
       {/* Batch fill */}
       {product.skuCount > 1 && (
         <div className="rounded-lg p-3 flex items-center gap-2 flex-wrap" style={{ backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--border-default)' }}>
-          <span className="text-[11px] font-medium shrink-0" style={{ color: 'var(--text-tertiary)' }}>批量填写</span>
+          <span className="text-[12px] font-medium shrink-0" style={{ color: 'var(--text-tertiary)' }}>批量填写</span>
           <div className="flex items-center gap-1.5">
-            <label className="text-[10px]" style={{ color: 'var(--text-tertiary)' }}>售价</label>
+            <label className="text-[12px]" style={{ color: 'var(--text-tertiary)' }}>售价</label>
             <input value={batchPrice} onChange={e => setBatchPrice(e.target.value)}
-              placeholder="0" className="w-[64px] h-7 px-1.5 rounded text-[11px] outline-none"
+              placeholder="0" className="w-[64px] h-7 px-1.5 rounded text-[13px] outline-none"
               style={{ backgroundColor: 'var(--input)', color: 'var(--text-primary)', border: '1px solid var(--border-default)' }} />
           </div>
           <div className="flex items-center gap-1.5">
-            <label className="text-[10px]" style={{ color: 'var(--text-tertiary)' }}>成本价</label>
+            <label className="text-[12px]" style={{ color: 'var(--text-tertiary)' }}>成本价</label>
             <input value={batchCost} onChange={e => setBatchCost(e.target.value)}
-              placeholder="0" className="w-[64px] h-7 px-1.5 rounded text-[11px] outline-none"
+              placeholder="0" className="w-[64px] h-7 px-1.5 rounded text-[13px] outline-none"
               style={{ backgroundColor: 'var(--input)', color: 'var(--text-primary)', border: '1px solid var(--border-default)' }} />
           </div>
           <div className="flex items-center gap-1.5">
-            <label className="text-[10px]" style={{ color: 'var(--text-tertiary)' }}>重量(g)</label>
+            <label className="text-[12px]" style={{ color: 'var(--text-tertiary)' }}>重量(g)</label>
             <input value={batchWeight} onChange={e => setBatchWeight(e.target.value)}
-              placeholder="0" className="w-[60px] h-7 px-1.5 rounded text-[11px] outline-none"
+              placeholder="0" className="w-[60px] h-7 px-1.5 rounded text-[13px] outline-none"
               style={{ backgroundColor: 'var(--input)', color: 'var(--text-primary)', border: '1px solid var(--border-default)' }} />
           </div>
           <div className="flex items-center gap-1.5">
-            <label className="text-[10px]" style={{ color: 'var(--text-tertiary)' }}>长(cm)</label>
+            <label className="text-[12px]" style={{ color: 'var(--text-tertiary)' }}>长(cm)</label>
             <input value={batchLength} onChange={e => setBatchLength(e.target.value)}
-              placeholder="0" className="w-[56px] h-7 px-1.5 rounded text-[11px] outline-none"
+              placeholder="0" className="w-[56px] h-7 px-1.5 rounded text-[13px] outline-none"
               style={{ backgroundColor: 'var(--input)', color: 'var(--text-primary)', border: '1px solid var(--border-default)' }} />
           </div>
           <div className="flex items-center gap-1.5">
-            <label className="text-[10px]" style={{ color: 'var(--text-tertiary)' }}>宽(cm)</label>
+            <label className="text-[12px]" style={{ color: 'var(--text-tertiary)' }}>宽(cm)</label>
             <input value={batchWidth} onChange={e => setBatchWidth(e.target.value)}
-              placeholder="0" className="w-[56px] h-7 px-1.5 rounded text-[11px] outline-none"
+              placeholder="0" className="w-[56px] h-7 px-1.5 rounded text-[13px] outline-none"
               style={{ backgroundColor: 'var(--input)', color: 'var(--text-primary)', border: '1px solid var(--border-default)' }} />
           </div>
           <div className="flex items-center gap-1.5">
-            <label className="text-[10px]" style={{ color: 'var(--text-tertiary)' }}>高(cm)</label>
+            <label className="text-[12px]" style={{ color: 'var(--text-tertiary)' }}>高(cm)</label>
             <input value={batchHeight} onChange={e => setBatchHeight(e.target.value)}
-              placeholder="0" className="w-[56px] h-7 px-1.5 rounded text-[11px] outline-none"
+              placeholder="0" className="w-[56px] h-7 px-1.5 rounded text-[13px] outline-none"
               style={{ backgroundColor: 'var(--input)', color: 'var(--text-primary)', border: '1px solid var(--border-default)' }} />
           </div>
-          <div className="flex items-center gap-2">
-            <label className="text-[10px]" style={{ color: 'var(--text-tertiary)' }}>库存</label>
+          <div className="flex items-center gap-1.5">
+            <label className="text-[12px]" style={{ color: 'var(--text-tertiary)' }}>库存</label>
             <input value={batchStock} onChange={e => setBatchStock(e.target.value)}
-              placeholder="0" className="w-20 h-7 px-2 rounded text-[11px] outline-none"
+              placeholder="0" className="w-[64px] h-7 px-1.5 rounded text-[13px] outline-none"
               style={{ backgroundColor: 'var(--input)', color: 'var(--text-primary)', border: '1px solid var(--border-default)' }} />
           </div>
           <button onClick={applyBatch}
-            className="h-7 px-3 rounded text-[10px] font-medium transition-colors"
+            className="h-7 px-3 rounded text-[12px] font-medium transition-colors"
             style={{ backgroundColor: 'var(--accent)', color: 'var(--text-inverse)' }}>
             {batchStatus === 'saving' ? '保存中...' : batchStatus === 'saved' ? '已保存' : '应用到全部'}
           </button>
@@ -347,23 +347,23 @@ function SkuTab({ product, onRefresh }: { product: Product; onRefresh?: () => Pr
         <table className="w-full text-left" style={{ tableLayout: 'fixed' }}>
           <thead>
             <tr style={{ backgroundColor: 'var(--bg-subtle)' }}>
-              <th className="px-3 py-3 text-[10px] font-medium" style={{ width: 65, color: 'var(--text-tertiary)' }}>主图</th>
-              <th className="px-3 py-3 text-[10px] font-medium" style={{ width: 70, color: 'var(--text-tertiary)' }}>SKU 编码</th>
-              <th className="px-3 py-3 text-[10px] font-medium" style={{ width: 100, color: 'var(--text-tertiary)' }}>英文名</th>
-              <th className="px-3 py-3 text-[10px] font-medium" style={{ width: 100, color: 'var(--text-tertiary)' }}>中文译名</th>
-              <th className="px-3 py-3 text-[10px] font-medium" style={{ width: 74, color: 'var(--text-tertiary)' }}>售价</th>
-              <th className="px-3 py-3 text-[10px] font-medium" style={{ width: 74, color: 'var(--text-tertiary)' }}>成本价</th>
-              <th className="px-3 py-3 text-[10px] font-medium" style={{ width: 60, color: 'var(--text-tertiary)' }}>重量(g)</th>
-              <th className="px-3 py-3 text-[10px] font-medium" style={{ width: 56, color: 'var(--text-tertiary)' }}>长(cm)</th>
-              <th className="px-3 py-3 text-[10px] font-medium" style={{ width: 56, color: 'var(--text-tertiary)' }}>宽(cm)</th>
-              <th className="px-3 py-3 text-[10px] font-medium" style={{ width: 56, color: 'var(--text-tertiary)' }}>高(cm)</th>
-              <th className="px-3 py-3 text-[10px] font-medium" style={{ width: 60, color: 'var(--text-tertiary)' }}>库存</th>
+              <th className="px-1 py-3 text-[12px] font-medium" style={{ width: 70, color: 'var(--text-tertiary)' }}>主图</th>
+              <th className="px-0.5 py-3 text-[12px] font-medium" style={{ width: 85, color: 'var(--text-tertiary)' }}>SKU 编码</th>
+              <th className="px-3 py-3 text-[12px] font-medium" style={{ width: 150, color: 'var(--text-tertiary)' }}>英文名</th>
+              <th className="px-3 py-3 text-[12px] font-medium" style={{ width: 150, color: 'var(--text-tertiary)' }}>中文译名</th>
+              <th className="px-3 py-3 text-[12px] font-medium" style={{ color: 'var(--text-tertiary)' }}>售价</th>
+              <th className="px-3 py-3 text-[12px] font-medium" style={{ color: 'var(--text-tertiary)' }}>成本价</th>
+              <th className="px-3 py-3 text-[12px] font-medium" style={{ color: 'var(--text-tertiary)' }}>重量(g)</th>
+              <th className="px-3 py-3 text-[12px] font-medium" style={{ color: 'var(--text-tertiary)' }}>长(cm)</th>
+              <th className="px-3 py-3 text-[12px] font-medium" style={{ color: 'var(--text-tertiary)' }}>宽(cm)</th>
+              <th className="px-3 py-3 text-[12px] font-medium" style={{ color: 'var(--text-tertiary)' }}>高(cm)</th>
+              <th className="px-3 py-3 text-[12px] font-medium" style={{ color: 'var(--text-tertiary)' }}>库存</th>
             </tr>
           </thead>
           <tbody>
             {product.skus.map(sku => (
               <tr key={sku.code} style={{ borderTop: '1px solid var(--border-soft)' }}>
-                <td className="px-3 py-2.5">
+                <td className="px-1 py-2.5">
                   <div className="w-9 h-9 rounded-md overflow-hidden cursor-pointer" style={{ backgroundColor: 'var(--bg-subtle)' }}
                     onMouseEnter={e => {
                       const rect = e.currentTarget.getBoundingClientRect()
@@ -386,8 +386,8 @@ function SkuTab({ product, onRefresh }: { product: Product; onRefresh?: () => Pr
                     )}
                   </div>
                 </td>
-                <td className="px-3 py-2.5 text-[11px] font-mono" style={{ color: 'var(--text-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sku.code}</td>
-                <td className="px-3 py-2.5 text-[11px]" style={{ color: 'var(--text-secondary)', whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: '1.3' }} title={sku.nameEn}>{sku.nameEn || sku.color}</td>
+                <td className="px-0.5 py-2.5 text-[13px] font-mono" style={{ color: 'var(--text-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sku.code}</td>
+                <td className="px-3 py-2.5 text-[14px]" style={{ color: 'var(--text-secondary)', whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: '1.3' }} title={sku.nameEn}>{sku.nameEn || sku.color}</td>
                 <td className="px-3 py-2.5"><GlassInput defaultValue={sku.color} /></td>
                 <td className="px-3 py-2.5">
                   <SkuEditableCell value={sku.price} prefix="¥" fieldKey="sellingPrice" onSave={(f, v) => saveSingleField(sku.id || sku.code, f, v)} />
@@ -664,7 +664,7 @@ function PublishTab({ product }: { product: Product }) {
         <thead>
           <tr style={{ backgroundColor: 'var(--bg-subtle)' }}>
             {['平台', '状态', '发布时间', '操作'].map(h => (
-              <th key={h} className="px-4 py-3 text-[10px] font-medium" style={{ color: 'var(--text-tertiary)' }}>{h}</th>
+              <th key={h} className="px-4 py-3 text-[12px] font-medium" style={{ color: 'var(--text-tertiary)' }}>{h}</th>
             ))}
           </tr>
         </thead>

@@ -8,6 +8,7 @@ import type {
   assets,
   publishLogs,
   pimPublishTasks,
+  catalogs,
 } from '../db/schema'
 
 // ── 产品主表 ──
@@ -31,6 +32,10 @@ export type PublishLogRow = typeof publishLogs.$inferSelect
 // ── PIM 发布任务表 ──
 export type PimPublishTaskRow = typeof pimPublishTasks.$inferSelect
 export type PublishTaskInsert = typeof pimPublishTasks.$inferInsert
+
+// ── 图册表 ──
+export type CatalogRow = typeof catalogs.$inferSelect
+export type CatalogInsert = typeof catalogs.$inferInsert
 
 // ── Insert 类型 ──
 export type ProductInsert = typeof products.$inferInsert

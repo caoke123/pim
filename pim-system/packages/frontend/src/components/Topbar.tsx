@@ -51,7 +51,7 @@ export default function Topbar() {
           </>
         )}
         <Bell className="w-4 h-4" style={{ color: 'var(--text-tertiary)' }} />
-        <span className="text-[11px] font-mono" style={{ color: 'var(--text-tertiary)' }}>{time.toLocaleTimeString('zh-CN', { hour12: false })}</span>
+        <span className="text-[13px] font-mono" style={{ color: 'var(--text-tertiary)' }}>{time.toLocaleTimeString('zh-CN', { hour12: false })}</span>
       </div>
     </header>
   )

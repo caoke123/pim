@@ -92,8 +92,7 @@ export default function Dashboard() {
               {recentProducts.map(p => (
                 <ProductCard key={p.spuCode}
                   imageUrl={p.mainImage} productName={p.spuName} spuCode={p.spuCode}
-                  skuCount={p.skuCount} salePrice={p.salePrice} costPrice={p.costPrice}
-                  platforms={p.platforms}
+                  skuCount={p.skuCount} salePrice={p.salePrice}
                   onDetail={() => navigate('/products')} />
               ))}
             </div>

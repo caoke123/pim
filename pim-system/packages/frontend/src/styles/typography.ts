@@ -22,109 +22,53 @@ export interface TypeToken {
 }
 
 export const scale: Record<string, TypeToken> = {
-  /** Stats cards — 32px numbers */
+  /** Page titles — 24px / 600 */
   'display-lg': {
     family: 'sans',
-    size: '32px',
-    weight: 600,
-    lineHeight: '1.1',
-    letterSpacing: '-0.4px',
-  },
-  /** Page titles — 24px */
-  'display-md': {
-    family: 'sans',
     size: '24px',
-    weight: 500,
-    lineHeight: '1.2',
+    weight: 600,
+    lineHeight: '1.3',
     letterSpacing: '-0.4px',
   },
-  /** Product names (drawer) — 17px */
+  /** Drawer titles, sidebar brand — 17px / 600 */
   'heading': {
     family: 'sans',
     size: '17px',
     weight: 600,
-    lineHeight: '1.3',
+    lineHeight: '1.4',
     letterSpacing: '-0.2px',
   },
-  /** Card titles — 15px */
-  'title': {
+  /** Body — 15px / 400 */
+  'body': {
     family: 'sans',
     size: '15px',
-    weight: 500,
-    lineHeight: '1.4',
-    letterSpacing: '-0.1px',
+    weight: 400,
+    lineHeight: '1.6',
+    letterSpacing: '0',
   },
-  /** Section labels — 13px */
-  'section': {
-    family: 'sans',
-    size: '13px',
-    weight: 500,
-    lineHeight: '1.4',
-    letterSpacing: '0.3px',
-  },
-  /** Body — 14px */
-  'body': {
+  /** UI — buttons, inputs, nav — 14px / 400 */
+  'ui': {
     family: 'sans',
     size: '14px',
     weight: 400,
     lineHeight: '1.5',
     letterSpacing: '0',
   },
-  /** Secondary body — 13px */
-  'body-sm': {
-    family: 'sans',
-    size: '13px',
-    weight: 400,
-    lineHeight: '1.5',
-    letterSpacing: '0',
-  },
-  /** Captions / meta — 12px */
+  /** Captions, th headers — 12px / 500 */
   'caption': {
     family: 'sans',
     size: '12px',
-    weight: 400,
+    weight: 500,
     lineHeight: '1.4',
     letterSpacing: '0',
   },
-  /** Small labels / badges — 11px */
-  'label': {
-    family: 'sans',
-    size: '11px',
-    weight: 500,
-    lineHeight: '1.3',
-    letterSpacing: '0.2px',
-  },
-  /** Micro text — 10px */
-  'micro': {
-    family: 'sans',
-    size: '10px',
-    weight: 400,
-    lineHeight: '1.3',
-    letterSpacing: '0',
-  },
-  /** Buttons — 13px medium */
-  'button': {
-    family: 'sans',
-    size: '13px',
-    weight: 500,
-    lineHeight: '1.2',
-    letterSpacing: '0',
-  },
-  /** SPU/SKU/ItemId — 11px mono */
-  'mono-id': {
+  /** Mono — SKU codes, times, IDs — 12px / 400 */
+  'mono': {
     family: 'mono',
-    size: '11px',
-    weight: 400,
-    lineHeight: '1.4',
-    letterSpacing: '0',
-  },
-  /** Terminal / code — 10px mono */
-  'mono-sm': {
-    family: 'mono',
-    size: '10px',
+    size: '12px',
     weight: 400,
     lineHeight: '1.5',
-    letterSpacing: '0',
+    letterSpacing: '0.3px',
   },
 }
 

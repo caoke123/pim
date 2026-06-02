@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { Toaster } from 'sonner'
 import { useTheme } from '@/hooks/useTheme'
 import Sidebar from '@/components/Sidebar'
 import Topbar from '@/components/Topbar'
@@ -17,10 +18,11 @@ export default function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <Toaster richColors position="top-right" />
       <BrowserRouter>
         <div className="flex h-screen w-screen overflow-hidden">
           <Sidebar theme={theme} onToggleTheme={toggleTheme} />
-          <div className="flex-1 flex flex-col overflow-hidden ml-[240px]">
+          <div className="flex-1 flex flex-col overflow-hidden ml-[240px]" id="main-content">
             <Topbar />
             <Routes>
               <Route path="/" element={<Dashboard />} />

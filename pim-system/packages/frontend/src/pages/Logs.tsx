@@ -114,7 +114,7 @@ export default function Logs() {
     <PageContainer>
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h1 className="text-[24px] font-medium tracking-tight" style={{ color: 'var(--text-primary)', letterSpacing: '-0.4px' }}>日志中心</h1>
+          <h1 className="text-[28px] font-semibold tracking-tight text-gray-900">日志中心</h1>
           <p className="text-[13px] mt-0.5" style={{ color: 'var(--text-tertiary)' }}>操作日志与发布日志</p>
         </div>
       </div>
@@ -150,26 +150,26 @@ export default function Logs() {
                   style={{ borderBottom: i < opLogs.length - 1 ? '1px solid var(--border-default)' : 'none' }}
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--bg-subtle)' }}
                   onMouseLeave={e => { (e.currentTarget as HTMLElement).style.backgroundColor = '' }}>
-                  <span className="px-1.5 py-0.5 rounded text-[9px] font-medium mt-0.5 shrink-0" style={{ backgroundColor: s.bg, color: s.dot }}>{s.label}</span>
+                  <span className="px-1.5 py-0.5 rounded text-[12px] font-medium mt-0.5 shrink-0" style={{ backgroundColor: s.bg, color: s.dot }}>{s.label}</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-[13px]" style={{ color: 'var(--text-primary)' }}>{l.message}</p>
                     <div className="flex items-center gap-2 mt-0.5">
-                      {l.spuCode && <span className="text-[10px] font-mono" style={{ color: 'var(--text-tertiary)' }}>{l.spuCode}</span>}
-                      <span className="text-[10px] px-1 rounded" style={{ backgroundColor: 'var(--bg-subtle)', color: 'var(--accent)' }}>
+                      {l.spuCode && <span className="text-[12px] font-mono" style={{ color: 'var(--text-tertiary)' }}>{l.spuCode}</span>}
+                      <span className="text-[12px] px-1 rounded" style={{ backgroundColor: 'var(--bg-subtle)', color: 'var(--accent)' }}>
                         {ACTION_LABELS[l.action] ?? l.action}
                       </span>
                       {l.fieldName && (
-                        <span className="text-[10px]" style={{ color: 'var(--text-tertiary)' }}>
+                        <span className="text-[12px]" style={{ color: 'var(--text-tertiary)' }}>
                           {FIELD_LABELS[l.fieldName] ?? l.fieldName}
                           {l.oldValue && l.newValue && (
                             <span> {l.oldValue} → {l.newValue}</span>
                           )}
                         </span>
                       )}
-                      <span className="text-[10px]" style={{ color: 'var(--text-tertiary)' }}>{l.operator}</span>
+                      <span className="text-[12px]" style={{ color: 'var(--text-tertiary)' }}>{l.operator}</span>
                     </div>
                   </div>
-                  <span className="text-[11px] font-mono shrink-0" style={{ color: 'var(--text-tertiary)' }}>{timeAgo(l.createdAt)}</span>
+                  <span className="text-[13px] font-mono shrink-0" style={{ color: 'var(--text-tertiary)' }}>{timeAgo(l.createdAt)}</span>
                 </div>
               )
             })
@@ -203,13 +203,13 @@ export default function Logs() {
                     <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: s.c }} />
                     <div className="flex-1">
                       <span className="text-[13px] font-medium" style={{ color: 'var(--text-primary)' }}>{t.platform} · {(t.productIds || []).length}个产品</span>
-                      <span className="text-[10px] ml-2 font-mono" style={{ color: 'var(--text-tertiary)' }}>{t.id.slice(0, 8)}...</span>
+                      <span className="text-[12px] ml-2 font-mono" style={{ color: 'var(--text-tertiary)' }}>{t.id.slice(0, 8)}...</span>
                     </div>
-                    <span className="text-[11px] px-2 py-0.5 rounded-full" style={{ color: s.c, backgroundColor: `${s.c}15` }}>{s.label}</span>
-                    <span className="text-[11px] font-mono" style={{ color: 'var(--text-tertiary)' }}>{timeAgo(t.createdAt)}</span>
+                    <span className="text-[13px] px-2 py-0.5 rounded-full" style={{ color: s.c, backgroundColor: `${s.c}15` }}>{s.label}</span>
+                    <span className="text-[13px] font-mono" style={{ color: 'var(--text-tertiary)' }}>{timeAgo(t.createdAt)}</span>
                   </div>
                   {expandedTask === t.id && t.logLines && Array.isArray(t.logLines) && t.logLines.length > 0 && (
-                    <div className="px-4 py-3 font-mono text-[10px] leading-relaxed" style={{ backgroundColor: 'rgba(0,0,0,0.03)', borderBottom: '1px solid var(--border-default)' }}>
+                    <div className="px-4 py-3 font-mono text-[12px] leading-relaxed" style={{ backgroundColor: 'rgba(0,0,0,0.03)', borderBottom: '1px solid var(--border-default)' }}>
                       {t.logLines.map((l: any, j: number) => (
                         <div key={j} style={{ color: 'var(--text-secondary)' }}>{l.nodeId} {l.message}</div>
                       ))}
@@ -235,7 +235,7 @@ function Pagination({ page, totalPages, onPageChange }: {
 }) {
   return (
     <div className="flex items-center justify-between px-4 py-3" style={{ borderTop: '1px solid var(--border-default)' }}>
-      <span className="text-[11px]" style={{ color: 'var(--text-tertiary)' }}>
+      <span className="text-[13px]" style={{ color: 'var(--text-tertiary)' }}>
         第 {page} / {totalPages} 页
       </span>
       <div className="flex items-center gap-2">

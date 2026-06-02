@@ -20,7 +20,7 @@ export default function Settings() {
 
   return (
     <PageContainer>
-      <h1 className="text-[24px] font-medium tracking-tight mb-1" style={{ color: 'var(--text-primary)', letterSpacing: '-0.4px' }}>系统设置</h1>
+      <h1 className="text-[28px] font-semibold tracking-tight text-gray-900 mb-1">系统设置</h1>
       <p className="text-[13px] mb-6" style={{ color: 'var(--text-tertiary)' }}>API Key、R2 配置、发布平台配置</p>
 
       <div className="flex gap-6">

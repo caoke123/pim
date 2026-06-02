@@ -1,5 +1,6 @@
 /** shared/db/schema.ts — Drizzle ORM Schema, 严格匹配真实 PostgreSQL 数据库 sorter */
 
+import { sql } from 'drizzle-orm'
 import {
   pgTable,
   uuid,
@@ -206,4 +207,29 @@ export const operationLogs = pgTable('operation_logs', {
 }, (table) => ({
   spuCodeIdx: index('idx_operation_logs_spu_code').on(table.spuCode),
   createdIdx: index('idx_operation_logs_created').on(table.createdAt),
+}))
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// catalogs — 产品图册表
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export const catalogs = pgTable('catalogs', {
+  id: uuid('id').primaryKey().defaultRandom().notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  coverImageUrl: text('cover_image_url'),
+  productIds: uuid('product_ids').array().notNull().default(sql`'{}'::uuid[]`),
+  status: varchar('status', { length: 20 }).notNull().default('draft'),
+  r2Path: text('r2_path'),
+  publicUrl: text('public_url'),
+  coverImageKey: text('cover_image_key'),
+  viewCount: integer('view_count').notNull().default(0),
+  lastViewedAt: timestamp('last_viewed_at', { withTimezone: true }),
+  publishedAt: timestamp('published_at', { withTimezone: true }),
+  operator: varchar('operator', { length: 50 }).default('XP'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  statusIdx: index('idx_catalogs_status').on(table.status),
+  createdIdx: index('idx_catalogs_created').on(table.createdAt),
 }))

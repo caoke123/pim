@@ -292,7 +292,7 @@ export default function PublishCenter() {
 
   return (
     <PageContainer>
-      <h1 className="text-[24px] font-medium tracking-tight mb-1" style={{ color: 'var(--text-primary)', letterSpacing: '-0.4px' }}>发布中心</h1>
+      <h1 className="text-[28px] font-semibold tracking-tight text-gray-900 mb-1">发布中心</h1>
       <p className="text-[13px] mb-6" style={{ color: 'var(--text-tertiary)' }}>选品 → 触发发布 → 查看任务状态</p>
 
       <div className="flex gap-6" style={{ alignItems: 'stretch' }}>
@@ -306,7 +306,7 @@ export default function PublishCenter() {
                   className={`rounded-lg px-5 py-3 text-left transition-all duration-200 ${p.active ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}
                   style={{ backgroundColor: selectedPlatform === p.name && p.active ? 'var(--bg-subtle)' : 'var(--bg-elevated)', border: selectedPlatform === p.name && p.active ? '2px solid var(--accent)' : '1px solid var(--border-default)' }}>
                   <p className="text-[14px] font-semibold" style={{ color: p.active ? 'var(--text-primary)' : 'var(--text-tertiary)' }}>{p.name}</p>
-                  <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-tertiary)' }}>{p.active ? `端口: ${p.port}` : '未配置'}</p>
+                  <p className="text-[13px] mt-0.5" style={{ color: 'var(--text-tertiary)' }}>{p.active ? `端口: ${p.port}` : '未配置'}</p>
                 </button>
               ))}
             </div>
@@ -327,7 +327,7 @@ export default function PublishCenter() {
                     <button onClick={() => { setProductsError(null); setProductsLoading(true); api.getProducts({ pageSize: 50 }).then(res => {
                       setProducts(res.data.items.map((item: ProductListItem) => ({ id: item.id, name: item.title, spuCode: item.spuCode, skuCount: item.skuCount, mainImage: item.mainImageUrl })))
                     }).catch((err: Error) => setProductsError(err.message || '加载产品失败')).finally(() => setProductsLoading(false)) }}
-                      className="text-[11px] underline" style={{ color: 'var(--accent)' }}>重试</button>
+                      className="text-[13px] underline" style={{ color: 'var(--accent)' }}>重试</button>
                   </div>
                 ) : products.length === 0 ? (
                   <div className="py-8 text-center text-[12px]" style={{ color: 'var(--text-tertiary)' }}>暂无产品</div>
@@ -349,7 +349,7 @@ export default function PublishCenter() {
                       )}
                       <div className="flex-1">
                         <p className="text-[13px] font-medium truncate" style={{ color: 'var(--text-primary)' }}>{p.name}</p>
-                        <p className="text-[10px] font-mono" style={{ color: 'var(--text-tertiary)' }}>{p.spuCode} · {p.skuCount} SKU</p>
+                        <p className="text-[12px] font-mono" style={{ color: 'var(--text-tertiary)' }}>{p.spuCode} · {p.skuCount} SKU</p>
                       </div>
                     </div>
                   ))
@@ -380,14 +380,14 @@ export default function PublishCenter() {
           <div>
             <div className="flex items-center justify-between mb-2">
               <span className="text-[12px] font-medium" style={{ color: 'var(--text-tertiary)' }}>最近任务</span>
-              <button onClick={loadHistory} className="text-[10px]" style={{ color: 'var(--accent)' }}>刷新</button>
+              <button onClick={loadHistory} className="text-[12px]" style={{ color: 'var(--accent)' }}>刷新</button>
             </div>
             <div className="rounded-lg overflow-hidden" style={{
               border: '1px solid var(--border-default)',
               ...(theme === 'light' && { backgroundColor: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(20px)' }),
             }}>
               {historyTasks.length === 0 ? (
-                <div className="py-8 text-center text-[11px]" style={{ color: 'var(--text-tertiary)' }}>暂无发布记录</div>
+                <div className="py-8 text-center text-[13px]" style={{ color: 'var(--text-tertiary)' }}>暂无发布记录</div>
               ) : (
                 historyTasks.map((t, i) => {
                   const s = statusBadge[t.status] || statusBadge.pending
@@ -397,10 +397,10 @@ export default function PublishCenter() {
                       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--bg-subtle)' }}
                       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.backgroundColor = '' }}>
                       <div className="flex-1 min-w-0 mr-2">
-                        <span className="text-[11px] block truncate" style={{ color: 'var(--text-primary)' }}>{t.name}</span>
-                        <span className="text-[9px] font-mono" style={{ color: 'var(--text-tertiary)' }}>{timeAgo(t.createdAt)}</span>
+                        <span className="text-[13px] block truncate" style={{ color: 'var(--text-primary)' }}>{t.name}</span>
+                        <span className="text-[12px] font-mono" style={{ color: 'var(--text-tertiary)' }}>{timeAgo(t.createdAt)}</span>
                       </div>
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-medium shrink-0"
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[12px] font-medium shrink-0"
                         style={{ backgroundColor: s.bg, color: s.dot }}>
                         <span className="w-1 h-1 rounded-full" style={{ backgroundColor: s.dot }} />{s.label}
                       </span>
@@ -478,16 +478,16 @@ function PublishTerminal({ active, logs, progress, status }: {
 
       <div className="relative z-10 flex flex-col flex-1">
         <div className="flex items-center justify-between shrink-0 px-4 h-9" style={{ borderBottom: `1px solid ${t.border}` }}>
-          <span className="text-[10px] font-mono font-medium tracking-wider" style={{ color: t.headerText }}>PUBLISH TERMINAL</span>
+          <span className="text-[12px] font-mono font-medium tracking-wider" style={{ color: t.headerText }}>PUBLISH TERMINAL</span>
           {active && (
-            <span className="text-[9px] font-mono" style={{ color: status === 'FAILED' ? t.errorColor : t.headerText }}>
+            <span className="text-[12px] font-mono" style={{ color: status === 'FAILED' ? t.errorColor : t.headerText }}>
               {status || (progress >= 100 ? 'COMPLETE' : 'RUNNING')}
             </span>
           )}
         </div>
 
         <div ref={scrollRef}
-          className="flex-1 overflow-y-auto px-4 py-3 font-mono text-[10px] leading-relaxed"
+          className="flex-1 overflow-y-auto px-4 py-3 font-mono text-[12px] leading-relaxed"
           style={{ scrollbarWidth: 'thin', scrollbarColor: `${t.border} transparent` }}>
           {active && logs.length === 0 ? (
             <div style={{ color: t.logColor }}>等待 Agent 连接...</div>

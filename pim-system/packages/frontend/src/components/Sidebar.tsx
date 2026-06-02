@@ -21,7 +21,7 @@ export default function Sidebar({ theme, onToggleTheme }: SidebarProps) {
       style={{ backgroundColor: 'var(--sidebar-bg)', borderRight: '1px solid var(--sidebar-border)' }}>
       <div className="h-14 flex items-center px-5" style={{ borderBottom: '1px solid var(--sidebar-border)' }}>
         <span className="text-[15px] font-semibold" style={{ color: 'var(--text-primary)' }}>雨图饰品 PIM</span>
-        <span className="ml-2 text-[10px] font-mono px-1.5 py-0.5 rounded" style={{ color: 'var(--sidebar-text)', backgroundColor: 'var(--sidebar-border)' }}>v1.0</span>
+        <span className="ml-2 text-[12px] font-mono px-1.5 py-0.5 rounded" style={{ color: 'var(--sidebar-text)', backgroundColor: 'var(--sidebar-border)' }}>v1.0</span>
       </div>
 
       <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
@@ -32,11 +32,11 @@ export default function Sidebar({ theme, onToggleTheme }: SidebarProps) {
 
       <div className="h-14 flex items-center justify-between px-4" style={{ borderTop: '1px solid var(--sidebar-border)' }}>
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-semibold"
+          <div className="w-7 h-7 rounded-full flex items-center justify-center text-[12px] font-semibold"
             style={{ backgroundColor: 'var(--accent-soft)', color: 'var(--accent)' }}>YT</div>
           <div>
             <p className="text-[12px] font-medium" style={{ color: 'var(--text-primary)' }}>运营</p>
-            <p className="text-[10px]" style={{ color: 'var(--sidebar-text)' }}>管理员</p>
+            <p className="text-[12px]" style={{ color: 'var(--sidebar-text)' }}>管理员</p>
           </div>
         </div>
         <ThemeToggle theme={theme} onToggle={onToggleTheme} />
