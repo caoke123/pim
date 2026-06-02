@@ -1,15 +1,14 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
-  Plus, Trash2, Send, ExternalLink, MoreHorizontal,
-  X, Check, Search, Phone, MessageCircle, Pencil, Eye, Copy,
+  Plus, Trash2, Send, MoreHorizontal,
+  X, Check, Search, Eye, Copy,
   Users as UsersIcon, Package as PackageIcon, FileText,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '@/api/client'
 import type {
-  DistributionListItem, DistributionDetail, CustomerListItem,
-  CatalogListItem, DistributionSkuItem,
+  DistributionListItem, CatalogListItem,
 } from '@/api/types'
 import DistributionDrawer from '@/components/DistributionDrawer'
 
@@ -368,217 +367,24 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
 // ═══════════════════════════════════════════════════════════════════
 
 function CreateDistributionModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
-  const [customers, setCustomers] = useState<CustomerListItem[]>([])
-  const [catalogs, setCatalogs] = useState<CatalogListItem[]>([])
-  const [customerId, setCustomerId] = useState('')
-  const [catalogId, setCatalogId] = useState('')
-  const [customerSearch, setCustomerSearch] = useState('')
-  const [catalogSearch, setCatalogSearch] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-
-  const [showNewCustomer, setShowNewCustomer] = useState(false)
-  const [newCustomer, setNewCustomer] = useState({ name: '', contactPerson: '', phone: '', wechat: '', notes: '' })
-  const [creatingCustomer, setCreatingCustomer] = useState(false)
-
-  useEffect(() => {
-    api.getCustomers({ pageSize: 100 }).then(r => setCustomers(r.data.items)).catch(() => {})
-    api.getCatalogs({ pageSize: 100 }).then(r => setCatalogs(r.data.items)).catch(() => {})
-  }, [])
-
-  const filteredCustomers = useMemo(() => {
-    const k = customerSearch.toLowerCase().trim()
-    if (!k) return customers
-    return customers.filter(c => c.name.toLowerCase().includes(k) || (c.contactPerson ?? '').toLowerCase().includes(k))
-  }, [customers, customerSearch])
-
-  const filteredCatalogs = useMemo(() => {
-    const k = catalogSearch.toLowerCase().trim()
-    if (!k) return catalogs
-    return catalogs.filter(c => c.name.toLowerCase().includes(k))
-  }, [catalogs, catalogSearch])
-
-  async function handleCreateCustomer() {
-    if (!newCustomer.name.trim()) {
-      toast.error('请输入客户名称')
-      return
-    }
-    setCreatingCustomer(true)
-    try {
-      const res = await api.createCustomer({
-        name: newCustomer.name.trim(),
-        contactPerson: newCustomer.contactPerson.trim() || undefined,
-        phone: newCustomer.phone.trim() || undefined,
-        wechat: newCustomer.wechat.trim() || undefined,
-        notes: newCustomer.notes.trim() || undefined,
-      })
-      setCustomers(prev => [res.data, ...prev])
-      setCustomerId(res.data.id)
-      setShowNewCustomer(false)
-      setNewCustomer({ name: '', contactPerson: '', phone: '', wechat: '', notes: '' })
-      toast.success('客户已创建')
-    } catch (e) {
-      toast.error('创建客户失败')
-    } finally {
-      setCreatingCustomer(false)
-    }
-  }
-
-  async function handleSubmit() {
-    if (!customerId) { toast.error('请选择客户'); return }
-    if (!catalogId) { toast.error('请选择图册'); return }
-    setSubmitting(true)
-    try {
-      await api.createDistribution({ customerId, catalogId })
-      toast.success('分销已创建')
-      onSuccess()
-    } catch (e) {
-      toast.error('创建分销失败')
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
   return (
-    <>
-      <motion.div
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        transition={{ duration: 0.2 }}
-        className="fixed inset-0 z-40"
-        style={{ backgroundColor: 'var(--overlay)' }}
-        onClick={onClose} />
-      <motion.div
-        initial={{ opacity: 0, scale: 0.96, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 20 }}
-        transition={spring}
-        className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[560px] max-h-[85vh] overflow-y-auto rounded-3xl"
-        style={{ backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-default)', boxShadow: 'var(--shadow-lg)' }}>
-        <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--border-default)' }}>
-          <h2 className="text-[16px] font-semibold" style={{ color: 'var(--text-primary)' }}>新建分销</h2>
-          <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center"
-            style={{ backgroundColor: 'var(--bg-surface)', color: 'var(--text-secondary)' }}>
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-        <div className="p-6 space-y-5">
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-[12px] font-medium" style={{ color: 'var(--text-secondary)' }}>选择客户</label>
-              <button
-                onClick={() => setShowNewCustomer(true)}
-                className="text-[12px] font-medium flex items-center gap-1"
-                style={{ color: 'var(--accent)' }}>
-                <Plus className="w-3 h-3" />新建客户
-              </button>
-            </div>
-            <div className="flex items-center gap-2 px-3 h-9 rounded-xl mb-2"
-              style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)' }}>
-              <Search className="w-3.5 h-3.5" style={{ color: 'var(--text-tertiary)' }} />
-              <input
-                value={customerSearch}
-                onChange={e => setCustomerSearch(e.target.value)}
-                placeholder="搜索客户…"
-                className="flex-1 bg-transparent outline-none text-[12px]"
-                style={{ color: 'var(--text-primary)' }} />
-            </div>
-            <div className="max-h-44 overflow-y-auto rounded-xl space-y-1 p-1"
-              style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)' }}>
-              {filteredCustomers.length === 0 ? (
-                <p className="text-[12px] text-center py-4" style={{ color: 'var(--text-tertiary)' }}>暂无客户，请新建</p>
-              ) : filteredCustomers.map(c => (
-                <button
-                  key={c.id}
-                  onClick={() => setCustomerId(c.id)}
-                  className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors"
-                  style={{
-                    backgroundColor: customerId === c.id ? 'var(--accent-soft)' : 'transparent',
-                    color: 'var(--text-primary)',
-                  }}>
-                  <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-semibold"
-                    style={{ backgroundColor: 'var(--accent)', color: 'var(--text-inverse)' }}>
-                    {c.name.charAt(0)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[12px] font-medium truncate">{c.name}</p>
-                    {c.contactPerson && <p className="text-[10px]" style={{ color: 'var(--text-tertiary)' }}>{c.contactPerson}</p>}
-                  </div>
-                  {customerId === c.id && <Check className="w-3.5 h-3.5" style={{ color: 'var(--accent)' }} />}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <label className="text-[12px] font-medium mb-2 block" style={{ color: 'var(--text-secondary)' }}>选择图册</label>
-            <div className="flex items-center gap-2 px-3 h-9 rounded-xl mb-2"
-              style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)' }}>
-              <Search className="w-3.5 h-3.5" style={{ color: 'var(--text-tertiary)' }} />
-              <input
-                value={catalogSearch}
-                onChange={e => setCatalogSearch(e.target.value)}
-                placeholder="搜索图册…"
-                className="flex-1 bg-transparent outline-none text-[12px]"
-                style={{ color: 'var(--text-primary)' }} />
-            </div>
-            <div className="grid grid-cols-3 gap-2 max-h-44 overflow-y-auto">
-              {filteredCatalogs.length === 0 ? (
-                <p className="col-span-3 text-[12px] text-center py-4" style={{ color: 'var(--text-tertiary)' }}>暂无图册</p>
-              ) : filteredCatalogs.map(c => (
-                <button
-                  key={c.id}
-                  onClick={() => setCatalogId(c.id)}
-                  className="flex flex-col gap-1.5 p-2 rounded-xl text-left transition-all"
-                  style={{
-                    backgroundColor: catalogId === c.id ? 'var(--accent-soft)' : 'var(--bg-surface)',
-                    border: catalogId === c.id ? '1px solid var(--accent)' : '1px solid var(--border-default)',
-                  }}>
-                  <div className="w-full aspect-[4/5] rounded-md overflow-hidden"
-                    style={{ backgroundColor: 'var(--bg-base)' }}>
-                    {c.coverImageUrl ? (
-                      <img src={c.coverImageUrl} alt={c.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center" style={{ color: 'var(--text-tertiary)' }}>
-                        <FileText className="w-4 h-4" />
-                      </div>
-                    )}
-                  </div>
-                  <p className="text-[11px] font-medium truncate" style={{ color: 'var(--text-primary)' }}>{c.name}</p>
-                  <p className="text-[10px]" style={{ color: 'var(--text-tertiary)' }}>{c.productCount} 个产品</p>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-        <div className="flex items-center justify-end gap-2 px-6 py-4" style={{ borderTop: '1px solid var(--border-default)' }}>
-          <button onClick={onClose} className="px-4 h-9 rounded-full text-[12px] font-medium transition-all active:scale-95"
-            style={{ backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)', border: '1px solid var(--border-default)' }}>
-            取消
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={submitting}
-            className="px-4 h-9 rounded-full text-[12px] font-medium transition-all active:scale-95 disabled:opacity-60"
-            style={{ backgroundColor: 'var(--accent)', color: 'var(--text-inverse)' }}>
-            {submitting ? '创建中…' : '创建分销'}
-          </button>
-        </div>
-      </motion.div>
-
-      <AnimatePresence>
-        {showNewCustomer && (
-          <NewCustomerModal
-            onClose={() => setShowNewCustomer(false)}
-            onCreated={c => { setCustomers(prev => [c, ...prev]); setCustomerId(c.id); setShowNewCustomer(false) }}
-          />
-        )}
-      </AnimatePresence>
-    </>
+    <NewDistributionCustomerModal onClose={onClose} onSuccess={onSuccess} />
   )
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// New Customer Modal
+// 新建分销客户弹窗
+// — 流程：填写客户信息 + 选择关联图册 → 创建客户 → 绑定图册 → 创建分销
+// — 居中：flex 容器 (Modal Root) + 子级 motion.div，不再用 50% + translate
+// — 颜色：选中卡片使用 #8B7FFF 主色 + 4px 光晕 (设计强调色，独立于 var(--accent))
 // ═══════════════════════════════════════════════════════════════════
 
-function NewCustomerModal({ onClose, onCreated }: { onClose: () => void; onCreated: (c: CustomerListItem) => void }) {
+const ACCENT_PURPLE = '#8B7FFF'
+const ACCENT_PURPLE_SOFT = 'rgba(139,127,255,.12)'
+
+function NewDistributionCustomerModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
+  const [catalogs, setCatalogs] = useState<CatalogListItem[]>([])
+  const [catalogId, setCatalogId] = useState('')
   const [name, setName] = useState('')
   const [contactPerson, setContactPerson] = useState('')
   const [phone, setPhone] = useState('')
@@ -586,97 +392,240 @@ function NewCustomerModal({ onClose, onCreated }: { onClose: () => void; onCreat
   const [notes, setNotes] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
+  useEffect(() => {
+    api.getCatalogs({ pageSize: 100 }).then(r => setCatalogs(r.data.items)).catch(() => {})
+  }, [])
+
   async function handleSubmit() {
     if (!name.trim()) { toast.error('请输入客户名称'); return }
+    if (!catalogId) { toast.error('请选择关联图册'); return }
     setSubmitting(true)
     try {
-      const res = await api.createCustomer({
+      const customerRes = await api.createCustomer({
         name: name.trim(),
         contactPerson: contactPerson.trim() || undefined,
         phone: phone.trim() || undefined,
         wechat: wechat.trim() || undefined,
         notes: notes.trim() || undefined,
       })
-      onCreated(res.data)
-      toast.success('客户已创建')
+      await api.createDistribution({ customerId: customerRes.data.id, catalogId })
+      toast.success('分销客户创建成功', { duration: 2000 })
+      onSuccess()
     } catch (e) {
-      toast.error('创建客户失败')
+      toast.error('创建失败，请重试')
     } finally {
       setSubmitting(false)
     }
   }
 
   return (
-    <>
+    <div
+      className="fixed inset-0 z-40 flex items-center justify-center"
+      style={{
+        backgroundColor: 'rgba(15,23,42,0.08)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+      }}
+      onClick={onClose}>
       <motion.div
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        transition={{ duration: 0.15 }}
-        className="fixed inset-0 z-50"
-        style={{ backgroundColor: 'var(--overlay)' }}
-        onClick={onClose} />
-      <motion.div
-        initial={{ opacity: 0, scale: 0.96, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 20 }}
+        initial={{ opacity: 0, scale: 0.96, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.96, y: 20 }}
         transition={spring}
-        className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[440px] rounded-3xl"
-        style={{ backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-default)', boxShadow: 'var(--shadow-lg)' }}>
-        <div className="flex items-center justify-between px-6 py-4" style={{ borderTop: '1px solid var(--border-default)' }}>
-          <h3 className="text-[15px] font-semibold" style={{ color: 'var(--text-primary)' }}>新建客户</h3>
-          <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center"
+        onClick={e => e.stopPropagation()}
+        className="w-[640px] max-h-[80vh] flex flex-col rounded-3xl overflow-hidden"
+        style={{
+          backgroundColor: 'var(--bg-elevated)',
+          border: '1px solid var(--border-default)',
+          boxShadow: 'var(--shadow-lg)',
+        }}>
+        <div
+          className="flex items-center justify-between px-6 py-4 shrink-0"
+          style={{ borderBottom: '1px solid var(--border-default)' }}>
+          <h2 className="text-[16px] font-semibold" style={{ color: 'var(--text-primary)' }}>
+            新建分销客户
+          </h2>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-95"
             style={{ backgroundColor: 'var(--bg-surface)', color: 'var(--text-secondary)' }}>
             <X className="w-4 h-4" />
           </button>
         </div>
-        <div className="p-6 space-y-3">
-          <Field label="客户名称 *" value={name} onChange={setName} placeholder="例：永辉首饰" required />
-          <Field label="联系人" value={contactPerson} onChange={setContactPerson} placeholder="姓名 / 职位" />
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="电话" value={phone} onChange={setPhone} placeholder="138xxxx" />
-            <Field label="微信" value={wechat} onChange={setWechat} placeholder="微信号" />
-          </div>
-          <Field label="备注" value={notes} onChange={setNotes} placeholder="合作偏好 / 区域等" textarea />
+
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+          <section>
+            <h3 className="text-[13px] font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>
+              客户信息
+            </h3>
+            <div className="space-y-3">
+              <FormField label="客户名称" required>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  placeholder="例：永辉百货"
+                  className="w-full h-9 px-3 rounded-xl text-[13px] outline-none transition-colors"
+                  style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', color: 'var(--text-primary)' }}
+                  onFocus={e => (e.currentTarget.style.borderColor = ACCENT_PURPLE)}
+                  onBlur={e => (e.currentTarget.style.borderColor = 'var(--border-default)')} />
+              </FormField>
+              <FormField label="联系人">
+                <input
+                  type="text"
+                  value={contactPerson}
+                  onChange={e => setContactPerson(e.target.value)}
+                  placeholder="张总"
+                  className="w-full h-9 px-3 rounded-xl text-[13px] outline-none transition-colors"
+                  style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', color: 'var(--text-primary)' }}
+                  onFocus={e => (e.currentTarget.style.borderColor = ACCENT_PURPLE)}
+                  onBlur={e => (e.currentTarget.style.borderColor = 'var(--border-default)')} />
+              </FormField>
+              <div className="grid grid-cols-2 gap-3">
+                <FormField label="联系电话">
+                  <input
+                    type="text"
+                    value={phone}
+                    onChange={e => setPhone(e.target.value)}
+                    placeholder="138xxxxxxxx"
+                    className="w-full h-9 px-3 rounded-xl text-[13px] outline-none transition-colors"
+                    style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', color: 'var(--text-primary)' }}
+                    onFocus={e => (e.currentTarget.style.borderColor = ACCENT_PURPLE)}
+                    onBlur={e => (e.currentTarget.style.borderColor = 'var(--border-default)')} />
+                </FormField>
+                <FormField label="微信">
+                  <input
+                    type="text"
+                    value={wechat}
+                    onChange={e => setWechat(e.target.value)}
+                    placeholder="zhangsan888"
+                    className="w-full h-9 px-3 rounded-xl text-[13px] outline-none transition-colors"
+                    style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', color: 'var(--text-primary)' }}
+                    onFocus={e => (e.currentTarget.style.borderColor = ACCENT_PURPLE)}
+                    onBlur={e => (e.currentTarget.style.borderColor = 'var(--border-default)')} />
+                </FormField>
+              </div>
+              <FormField label="备注">
+                <textarea
+                  value={notes}
+                  onChange={e => setNotes(e.target.value)}
+                  placeholder="日本站客户，按月结算"
+                  rows={3}
+                  className="w-full px-3 py-2 rounded-xl text-[13px] outline-none resize-none transition-colors"
+                  style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', color: 'var(--text-primary)' }}
+                  onFocus={e => (e.currentTarget.style.borderColor = ACCENT_PURPLE)}
+                  onBlur={e => (e.currentTarget.style.borderColor = 'var(--border-default)')} />
+              </FormField>
+            </div>
+          </section>
+
+          <section>
+            <div className="mb-3">
+              <h3 className="text-[13px] font-semibold" style={{ color: 'var(--text-primary)' }}>
+                关联图册 <span style={{ color: ACCENT_PURPLE }}>*</span>
+              </h3>
+              <p className="text-[12px] mt-1" style={{ color: 'var(--text-tertiary)' }}>
+                请选择一个产品图册作为该客户的产品来源
+              </p>
+            </div>
+            <div
+              className="flex flex-wrap gap-3 p-3 rounded-2xl overflow-y-auto"
+              style={{
+                backgroundColor: 'var(--bg-surface)',
+                border: '1px solid var(--border-default)',
+                maxHeight: 280,
+                justifyContent: 'flex-start',
+              }}>
+              {catalogs.length === 0 ? (
+                <div className="w-full text-center text-[12px] py-6" style={{ color: 'var(--text-tertiary)' }}>
+                  暂无图册，请先到产品图册创建
+                </div>
+              ) : catalogs.map(c => {
+                const selected = c.id === catalogId
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => setCatalogId(c.id)}
+                    className="flex flex-col gap-2 text-left transition-all active:scale-[0.98]"
+                    style={{
+                      width: 140,
+                      height: 190,
+                      padding: 8,
+                      borderRadius: 14,
+                      backgroundColor: 'var(--bg-elevated)',
+                      border: selected ? `2px solid ${ACCENT_PURPLE}` : '2px solid transparent',
+                      boxShadow: selected ? `0 0 0 4px ${ACCENT_PURPLE_SOFT}` : 'none',
+                      boxSizing: 'border-box',
+                    }}>
+                    <div
+                      className="w-full overflow-hidden shrink-0"
+                      style={{
+                        aspectRatio: '3 / 4',
+                        borderRadius: 12,
+                        backgroundColor: 'var(--bg-base)',
+                      }}>
+                      {c.coverImageUrl ? (
+                        <img src={c.coverImageUrl} alt={c.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center" style={{ color: 'var(--text-tertiary)' }}>
+                          <FileText className="w-6 h-6" />
+                        </div>
+                      )}
+                    </div>
+                    <p
+                      className="text-[11px] font-medium leading-tight"
+                      style={{
+                        color: selected ? ACCENT_PURPLE : 'var(--text-primary)',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        lineHeight: '1.3',
+                      }}>
+                      {c.name}
+                    </p>
+                  </button>
+                )
+              })}
+            </div>
+          </section>
         </div>
-        <div className="flex items-center justify-end gap-2 px-6 py-4" style={{ borderTop: '1px solid var(--border-default)' }}>
-          <button onClick={onClose} className="px-4 h-9 rounded-full text-[12px] font-medium transition-all active:scale-95"
-            style={{ backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)', border: '1px solid var(--border-default)' }}>
+
+        <div
+          className="flex items-center justify-end gap-2 px-6 py-4 shrink-0"
+          style={{ borderTop: '1px solid var(--border-default)' }}>
+          <button
+            onClick={onClose}
+            className="px-4 h-9 rounded-full text-[12px] font-medium transition-all active:scale-95"
+            style={{
+              backgroundColor: 'var(--bg-surface)',
+              color: 'var(--text-primary)',
+              border: '1px solid var(--border-default)',
+            }}>
             取消
           </button>
           <button
             onClick={handleSubmit}
             disabled={submitting}
             className="px-4 h-9 rounded-full text-[12px] font-medium transition-all active:scale-95 disabled:opacity-60"
-            style={{ backgroundColor: 'var(--accent)', color: 'var(--text-inverse)' }}>
-            {submitting ? '创建中…' : '保存客户'}
+            style={{ backgroundColor: ACCENT_PURPLE, color: '#FFFFFF' }}>
+            {submitting ? '创建中…' : '创建客户'}
           </button>
         </div>
       </motion.div>
-    </>
+    </div>
   )
 }
 
-function Field({ label, value, onChange, placeholder, textarea, required }: {
-  label: string; value: string; onChange: (v: string) => void; placeholder?: string; textarea?: boolean; required?: boolean
-}) {
+function FormField({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return (
     <div>
-      <label className="text-[12px] font-medium mb-1.5 block" style={{ color: 'var(--text-secondary)' }}>{label}</label>
-      {textarea ? (
-        <textarea
-          value={value}
-          onChange={e => onChange(e.target.value)}
-          placeholder={placeholder}
-          rows={3}
-          className="w-full px-3 py-2 rounded-xl text-[12px] outline-none resize-none"
-          style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', color: 'var(--text-primary)' }} />
-      ) : (
-        <input
-          type="text"
-          value={value}
-          onChange={e => onChange(e.target.value)}
-          placeholder={placeholder}
-          required={required}
-          className="w-full h-9 px-3 rounded-xl text-[12px] outline-none"
-          style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', color: 'var(--text-primary)' }} />
-      )}
+      <label className="text-[12px] font-medium mb-1.5 block" style={{ color: 'var(--text-secondary)' }}>
+        {label}
+        {required && <span style={{ color: '#8B7FFF', marginLeft: 2 }}>*</span>}
+      </label>
+      {children}
     </div>
   )
 }
