@@ -153,6 +153,7 @@ export interface DistributionListItem {
   id: string
   customerId: string
   customerName: string
+  customerNotes: string | null
   catalogId: string
   catalogName: string
   catalogCoverImageUrl: string | null
@@ -184,8 +185,11 @@ export interface DistributionDetail {
   customerContactPerson: string | null
   customerPhone: string | null
   customerWechat: string | null
+  customerNotes: string | null
   catalogId: string
   catalogName: string
+  catalogCoverImageUrl: string | null
+  productCount: number
   agreement: string | null
   status: string
   publicUrl: string | null

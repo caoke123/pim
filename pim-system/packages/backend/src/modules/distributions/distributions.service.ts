@@ -11,6 +11,7 @@ export interface DistributionListItem {
   id: string
   customerId: string
   customerName: string
+  customerNotes: string | null
   catalogId: string
   catalogName: string
   catalogCoverImageUrl: string | null
@@ -42,6 +43,7 @@ export interface DistributionDetail {
   customerContactPerson: string | null
   customerPhone: string | null
   customerWechat: string | null
+  customerNotes: string | null
   catalogId: string
   catalogName: string
   agreement: string | null
@@ -78,7 +80,10 @@ export class DistributionsService {
     page: number
     pageSize: number
   }> {
-    const [countResult] = await db.select({ count: count() }).from(distributions)
+    const [countResult] = await db
+      .select({ count: count() })
+      .from(distributions)
+      .where(eq(distributions.status, 'active'))
     const total = countResult?.count ?? 0
 
     const rows = await db
@@ -86,6 +91,7 @@ export class DistributionsService {
         id: distributions.id,
         customerId: distributions.customerId,
         customerName: customers.name,
+        customerNotes: customers.notes,
         catalogId: distributions.catalogId,
         catalogName: catalogs.name,
         catalogCoverImageUrl: catalogs.coverImageUrl,
@@ -98,6 +104,7 @@ export class DistributionsService {
       .from(distributions)
       .leftJoin(customers, eq(customers.id, distributions.customerId))
       .leftJoin(catalogs, eq(catalogs.id, distributions.catalogId))
+      .where(eq(distributions.status, 'active'))
       .orderBy(desc(distributions.createdAt))
       .limit(pageSize)
       .offset((page - 1) * pageSize)
@@ -115,6 +122,7 @@ export class DistributionsService {
           id: row.id,
           customerId: row.customerId,
           customerName: row.customerName ?? '—',
+          customerNotes: row.customerNotes ?? null,
           catalogId: row.catalogId,
           catalogName: row.catalogName ?? '—',
           catalogCoverImageUrl: row.catalogCoverImageUrl ?? null,
@@ -140,6 +148,7 @@ export class DistributionsService {
         customerContactPerson: customers.contactPerson,
         customerPhone: customers.phone,
         customerWechat: customers.wechat,
+        customerNotes: customers.notes,
         catalogId: distributions.catalogId,
         catalogName: catalogs.name,
         catalogProductIds: catalogs.productIds,
@@ -224,6 +233,7 @@ export class DistributionsService {
       customerContactPerson: row.customerContactPerson ?? null,
       customerPhone: row.customerPhone ?? null,
       customerWechat: row.customerWechat ?? null,
+      customerNotes: row.customerNotes ?? null,
       catalogId: row.catalogId,
       catalogName: row.catalogName ?? '—',
       agreement: row.agreement ?? null,
