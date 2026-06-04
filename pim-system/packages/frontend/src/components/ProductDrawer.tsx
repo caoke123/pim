@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X, ChevronLeft, ChevronRight, Copy, Trash2, Check, Loader2, AlertCircle, ChevronDown, ChevronUp, Sparkles } from 'lucide-react'
 import { type Product, type SkuItem } from '@/mock'
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL + '/api/v1'
+
 /* ================================================================
    ProductDrawer — Pure CSS Variable Rendering
    All colors via var(--xxx), zero theme branching in styles.
@@ -218,7 +220,7 @@ function SkuTab({ product, onRefresh }: { product: Product; onRefresh?: () => Pr
 
   const saveSingleField = useCallback(async (skuId: string, field: string, newValue: number) => {
     if (!productId) throw new Error('productId missing')
-    const res = await fetch(`http://localhost:8000/api/v1/products/${productId}/skus`, {
+    const res = await fetch(`${API_BASE}/products/${productId}/skus`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ skus: [{ skuId, [field]: newValue }] }),
@@ -233,7 +235,7 @@ function SkuTab({ product, onRefresh }: { product: Product; onRefresh?: () => Pr
     if (!productId) throw new Error('productId missing')
     const currentSize = sku.size || { length: 0, width: 0, height: 0, unit: 'cm' }
     const fullSize = { ...currentSize, [field]: newValue }
-    const res = await fetch(`http://localhost:8000/api/v1/products/${productId}/skus`, {
+    const res = await fetch(`${API_BASE}/products/${productId}/skus`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ skus: [{ skuId, sizeJson: fullSize }] }),
@@ -271,7 +273,7 @@ function SkuTab({ product, onRefresh }: { product: Product; onRefresh?: () => Pr
 
       if (updates.length === 0) { setBatchStatus('idle'); return }
 
-      const res = await fetch(`http://localhost:8000/api/v1/products/${productId}/skus`, {
+      const res = await fetch(`${API_BASE}/products/${productId}/skus`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ skus: updates }),

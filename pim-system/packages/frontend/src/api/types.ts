@@ -193,8 +193,40 @@ export interface DistributionDetail {
   agreement: string | null
   status: string
   publicUrl: string | null
+  showCustomerName: boolean
   operator: string | null
   createdAt: string
   updatedAt: string
   skus: DistributionSkuItem[]
+}
+
+// ── 分享 API ──
+
+export interface ShareProductItem {
+  productId: string
+  title: string
+  mainImageUrl: string | null
+  sortOrder: number
+  skus: ShareSkuItem[]
+}
+
+export interface ShareSkuItem {
+  skuId: string
+  skuCode: string
+  specs: string
+  skuImageUrl: string | null
+  basePrice: number | null
+  customerPrice: number | null
+  stock: number
+}
+
+export interface ShareDistributionResponse {
+  id: string
+  publicUrl: string | null
+  customerName: string | null
+  catalogName: string
+  catalogCoverImageUrl: string | null
+  agreement: string | null
+  productCount: number
+  products: ShareProductItem[]
 }

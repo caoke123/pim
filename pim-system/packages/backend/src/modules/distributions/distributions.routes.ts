@@ -11,14 +11,14 @@ const createSchema = z.object({
   customerId: z.string().uuid('客户 ID 不合法'),
   catalogId: z.string().uuid('图册 ID 不合法'),
   agreement: z.string().max(20000).optional(),
+  showCustomerName: z.boolean().optional(),
 })
 
 const updateSchema = z.object({
   agreement: z.string().max(20000).optional(),
   status: z.enum(['active', 'inactive']).optional(),
-  customerId: z.string().uuid().optional(),
-  catalogId: z.string().uuid().optional(),
-})
+  showCustomerName: z.boolean().optional(),
+}).strict()
 
 const upsertPricesSchema = z.object({
   items: z
@@ -76,8 +76,7 @@ distributionsRoutes.delete('/:id', async (c) => {
 
 distributionsRoutes.post('/:id/publish', async (c) => {
   const id = c.req.param('id')
-  const data = await distributionsService.publish(id)
-  if (!data) throw new NotFoundError(ErrorCode.NOT_FOUND, '分销记录不存在')
+  const data = await distributionsService.publishDistribution(id)
   return c.json({ code: 0, message: 'ok', data })
 })
 

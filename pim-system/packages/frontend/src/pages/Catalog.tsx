@@ -10,7 +10,7 @@ import { toast } from 'sonner'
 import { useThemeStore } from '@/stores/useThemeStore'
 import { CatalogDrawer as CatalogDrawerComponent } from '@/components/CatalogDrawer'
 
-const API_BASE = 'http://localhost:8000/api/v1'
+const API_BASE = import.meta.env.VITE_API_BASE_URL + '/api/v1'
 const PAGE_SIZE = 12
 
 interface Catalog {

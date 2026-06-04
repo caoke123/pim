@@ -19,7 +19,7 @@ import { toast } from 'sonner'
 import { api } from '@/api/client'
 import type { ProductListItem } from '@/api/types'
 
-const API_BASE = 'http://localhost:8000/api/v1'
+const API_BASE = import.meta.env.VITE_API_BASE_URL + '/api/v1'
 const spring = { type: 'spring' as const, stiffness: 300, damping: 30, mass: 0.8 }
 const MAX_DESC = 200
 

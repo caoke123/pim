@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
   Plus, Trash2, MoreHorizontal,
-  X, Check, Search, Eye, Copy, Loader2, StickyNote,
+  X, Check, Search, Eye, Copy, Loader2, StickyNote, Send,
   Users as UsersIcon, FileText,
   AlertTriangle,
 } from 'lucide-react'
@@ -28,6 +28,7 @@ export default function Distributions() {
 
   const [showCreate, setShowCreate] = useState(false)
   const [openId, setOpenId] = useState<string | null>(null)
+  const [publishing, setPublishing] = useState<string | null>(null)
 
   async function load(p = page, k = keyword) {
     setLoading(true)
@@ -58,7 +59,21 @@ export default function Distributions() {
     }
   }
 
-  function copyPublicUrl(url: string) {
+  async function handlePublish(id: string) {
+    setPublishing(id)
+    try {
+      await api.publishDistribution(id)
+      toast.success('发布成功')
+      onRefresh()
+    } catch {
+      toast.error('发布失败')
+    } finally {
+      setPublishing(null)
+    }
+  }
+
+  function copyDistributionLink(distId: string) {
+    const url = `${window.location.protocol}//${window.location.hostname}:3010/distributions/${distId}`
     navigator.clipboard.writeText(url)
     toast.success('链接已复制')
   }
@@ -118,8 +133,10 @@ export default function Distributions() {
                 key={item.id}
                 item={item}
                 onOpen={() => setOpenId(item.id)}
-                onCopy={() => item.publicUrl && copyPublicUrl(item.publicUrl)}
+                onPublish={() => handlePublish(item.id)}
+                onCopy={() => item.publicUrl && copyDistributionLink(item.id)}
                 onDelete={() => handleDelete(item.id)}
+                publishing={publishing === item.id}
               />
             ))}
           </AnimatePresence>
@@ -171,12 +188,14 @@ export default function Distributions() {
 // ═══════════════════════════════════════════════════════════════════
 
 function DistributionCard({
-  item, onOpen, onCopy, onDelete,
+  item, onOpen, onPublish, onCopy, onDelete, publishing,
 }: {
   item: DistributionListItem
   onOpen: () => void
+  onPublish: () => void
   onCopy: () => void
   onDelete: () => Promise<void>
+  publishing: boolean
 }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [showConfirmDelete, setShowConfirmDelete] = useState(false)
@@ -200,8 +219,6 @@ function DistributionCard({
   function handleCopyClick() {
     if (item.publicUrl) {
       onCopy()
-    } else {
-      toast.error('请先在详情中发布图册')
     }
   }
 
@@ -284,12 +301,22 @@ function DistributionCard({
             查看
           </button>
 
-          <button
-            onClick={(e) => { e.stopPropagation(); handleCopyClick() }}
-            className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-normal rounded-lg border border-[#635BFF]/10 bg-[#635BFF]/5 text-[#635BFF] hover:bg-[#635BFF] hover:text-white transition-all duration-150 focus:outline-none shadow-sm shadow-[#635BFF]/5">
-            <Copy className="w-3 h-3 shrink-0" />
-            复制链接
-          </button>
+          {item.publicUrl ? (
+            <button
+              onClick={(e) => { e.stopPropagation(); handleCopyClick() }}
+              className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-normal rounded-lg border border-[#635BFF]/10 bg-[#635BFF]/5 text-[#635BFF] hover:bg-[#635BFF] hover:text-white transition-all duration-150 focus:outline-none shadow-sm shadow-[#635BFF]/5">
+              <Copy className="w-3 h-3 shrink-0" />
+              复制链接
+            </button>
+          ) : (
+            <button
+              onClick={(e) => { e.stopPropagation(); onPublish() }}
+              disabled={publishing}
+              className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-normal rounded-lg border border-[#f97316]/10 bg-[#f97316]/5 text-[#f97316] hover:bg-[#f97316] hover:text-white transition-all duration-150 focus:outline-none shadow-sm shadow-[#f97316]/5 disabled:opacity-40">
+              <Send className="w-3 h-3 shrink-0" />
+              {publishing ? '发布中...' : '发布'}
+            </button>
+          )}
 
           <div className="relative">
             <button

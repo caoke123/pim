@@ -5,7 +5,7 @@ import { useTheme } from '@/hooks/useTheme'
 import { api } from '@/api/client'
 import type { ProductListItem } from '@/api/types'
 
-const API_BASE = 'http://localhost:8000/api/v1'
+const API_BASE = import.meta.env.VITE_API_BASE_URL + '/api/v1'
 
 const platforms = [
   { name: 'Shopee', active: true, port: 13000 },

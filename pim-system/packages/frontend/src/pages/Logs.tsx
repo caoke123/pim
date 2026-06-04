@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Loader2, ChevronLeft, ChevronRight } from 'lucide-react'
 import PageContainer from '@/components/PageContainer'
 
-const API_BASE = 'http://localhost:8000/api/v1'
+const API_BASE = import.meta.env.VITE_API_BASE_URL + '/api/v1'
 
 const levelStyle: Record<string, { dot: string; bg: string; label: string }> = {
   success: { dot: '#34C78A', bg: 'rgba(52,199,138,0.1)', label: '成功' },

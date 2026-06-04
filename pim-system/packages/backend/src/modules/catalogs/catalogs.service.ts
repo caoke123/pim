@@ -453,7 +453,8 @@ export class CatalogsService {
     }
 
     // 构造公开 URL
-    const publicUrl = `${r2CustomDomain}/${r2Key}`
+    const eCatalogBase = process.env.ECATALOG_BASE_URL || 'http://localhost:3010'
+    const publicUrl = `${eCatalogBase}/c/${id}`
 
     // 更新数据库
     await db

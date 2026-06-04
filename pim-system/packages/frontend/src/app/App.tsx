@@ -11,6 +11,7 @@ import Catalog from '@/pages/Catalog'
 import Logs from '@/pages/Logs'
 import Settings from '@/pages/Settings'
 import Distributions from '@/pages/Distributions'
+import ECatalog from '@/pages/ECatalog'
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 30_000, retry: 1 } } })
 
@@ -33,6 +34,7 @@ export default function App() {
               <Route path="/distributions" element={<Distributions />} />
               <Route path="/logs" element={<Logs />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/d/:distributionId" element={<ECatalog />} />
             </Routes>
           </div>
         </div>

@@ -65,14 +65,15 @@ export default function DistributionDrawer({ distributionId, defaultTab, onClose
             <h2 className="text-[18px] font-semibold flex-1 truncate" style={{ color: 'var(--text-primary)' }}>
               {detail.customerName} · {detail.catalogName}
             </h2>
-            <CopyLinkButton url={detail.publicUrl} />
+            <CopyLinkButton id={detail.id} />
             <button
               onClick={async () => {
                 if (!detail.publicUrl) {
                   toast.error('请先生成链接')
                   return
                 }
-                await navigator.clipboard.writeText(detail.publicUrl)
+                const url = `${window.location.protocol}//${window.location.hostname}:3010/distributions/${detail.id}`
+                await navigator.clipboard.writeText(url)
                 toast.success('链接已复制')
               }}
               className="h-9 px-3 rounded-full text-[12px] font-medium flex items-center gap-1.5 transition-all active:scale-95"
@@ -100,7 +101,7 @@ export default function DistributionDrawer({ distributionId, defaultTab, onClose
 
         <div className="flex-1 overflow-y-auto">
           {tab === 'products' && <ProductsTab detail={detail} onUpdate={load} />}
-          {tab === 'customer' && <CustomerTab detail={detail} />}
+          {tab === 'customer' && <CustomerTab detail={detail} onUpdate={load} />}
           {tab === 'catalog' && <CatalogTab detail={detail} onUpdate={load} />}
           {tab === 'agreement' && (
             <AgreementTab
@@ -165,8 +166,8 @@ export function DrawerShell({ children, onClose }: { children: React.ReactNode; 
   )
 }
 
-function CopyLinkButton({ url }: { url: string | null }) {
-  if (!url) return null
+function CopyLinkButton({ id }: { id: string }) {
+  const url = `${window.location.protocol}//${window.location.hostname}:3010/distributions/${id}`
   return (
     <button
       onClick={async () => {
@@ -515,7 +516,7 @@ function SkuRow({ item, dirty, onPriceChange }: { item: DistributionSkuItem; dir
 type FieldKey = 'name' | 'contactPerson' | 'phone' | 'wechat' | 'notes'
 type FieldStatus = 'idle' | 'saving' | 'success'
 
-function CustomerTab({ detail }: { detail: DistributionDetail }) {
+function CustomerTab({ detail, onUpdate }: { detail: DistributionDetail; onUpdate?: () => void }) {
   const [name, setName] = useState(detail.customerName)
   const [contactPerson, setContactPerson] = useState(detail.customerContactPerson ?? '')
   const [phone, setPhone] = useState(detail.customerPhone ?? '')
@@ -624,9 +625,38 @@ function CustomerTab({ detail }: { detail: DistributionDetail }) {
             onBlurCapture={e => (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-default)'} />
           {status.notes === 'saving' && <Loader2 className="absolute right-3 top-2.5 w-3.5 h-3.5 animate-spin" style={{ color: 'var(--text-tertiary)' }} />}
           {status.notes === 'success' && <Check className="absolute right-3 top-2.5 w-3.5 h-3.5" style={{ color: '#10b981' }} />}
+          </div>
+        </div>
+
+        <div className="rounded-2xl p-4 mt-5"
+          style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)' }}>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[13px] font-medium" style={{ color: 'var(--text-primary)' }}>显示客户名称</p>
+              <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
+                关闭时，客户浏览图册不会看到客户名称，可避免商业关系暴露
+              </p>
+            </div>
+            <button
+              onClick={async () => {
+                const next = !detail.showCustomerName
+                try {
+                  await api.updateDistribution(detail.id, { showCustomerName: next })
+                  toast.success(next ? '已开启' : '已关闭')
+                  onUpdate?.()
+                } catch {
+                  toast.error('设置失败')
+                }
+              }}
+              className="w-11 h-6 rounded-full relative transition-colors shrink-0"
+              style={{ backgroundColor: detail.showCustomerName ? 'var(--accent)' : 'var(--border-strong)' }}
+            >
+              <span className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform"
+                style={{ left: detail.showCustomerName ? 'calc(100% - 22px)' : '2px' }} />
+            </button>
+          </div>
         </div>
       </div>
-    </div>
   )
 }
 

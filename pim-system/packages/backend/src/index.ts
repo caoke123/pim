@@ -14,6 +14,7 @@ import { publishRoutes } from './modules/publish'
 import { logsRoutes } from './modules/logs/logs.routes'
 import { catalogsRoutes } from './modules/catalogs'
 import { distributionsModule } from './modules/distributions'
+import { shareModule } from './modules/share'
 import { requestIdMiddleware } from './shared/utils'
 import { globalErrorHandler } from './shared/middleware'
 import { logger } from './shared/utils/logger'
@@ -29,7 +30,7 @@ app.use('/*', requestIdMiddleware)
 // ── CORS 中间件 ───────────────────────────────────────────────────────────
 
 app.use('/*', cors({
-  origin: process.env.CORS_ORIGINS || 'http://localhost:5173',
+  origin: process.env.CORS_ORIGINS || 'http://localhost:5174',
 }))
 
 // ── 全局错误处理中间件 ────────────────────────────────────────────────────
@@ -43,6 +44,7 @@ app.route('/api/v1/publish', publishRoutes)
 app.route('/api/v1/logs', logsRoutes)
 app.route('/api/v1/catalogs', catalogsRoutes)
 app.route('/api/v1/distributions', distributionsModule)
+app.route('/api/share', shareModule)
 app.route('/api/v1/sync', syncRoutes)
 app.route('/api/v1/exports', exportsRoutes)
 app.route('/api/v1/distributors', distributorsRoutes)
