@@ -7,6 +7,7 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
 import type { CatalogRow } from '../../shared/types/db'
 import type { ProductRow } from '../../shared/types/db'
 import type { ImagesJson } from '../../shared/types'
+import { triggerDeploy } from '../../services/trigger-deploy'
 
 const { catalogs, products, productSkus } = schema
 
@@ -15,6 +16,7 @@ export interface CatalogListItem {
   name: string
   description: string | null
   coverImageUrl: string | null
+  fallbackCoverUrl: string | null
   status: string
   productCount: number
   publicUrl: string | null
@@ -79,6 +81,7 @@ export class CatalogsService {
       name: row.name,
       description: row.description ?? null,
       coverImageUrl: row.coverImageUrl,
+      fallbackCoverUrl: null,
       status: row.status,
       productCount: (row.productIds || []).length,
       publicUrl: row.publicUrl,
@@ -88,6 +91,36 @@ export class CatalogsService {
       createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : String(row.createdAt),
       updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : String(row.updatedAt),
     }))
+
+    // 为没有封面的图册，随机取一个产品主图作为 fallback
+    const noCover = items.filter(i => !i.coverImageUrl && i.productCount > 0)
+    if (noCover.length > 0) {
+      // 收集所有需要查的 productIds
+      const allIds = rows
+        .filter(r => !r.coverImageUrl && (r.productIds || []).length > 0)
+        .flatMap(r => r.productIds!)
+        .filter(Boolean)
+
+      if (allIds.length > 0) {
+        const productImages = await db
+          .select({ id: products.id, mainImageUrl: products.mainImageUrl })
+          .from(products)
+          .where(inArray(products.id, allIds))
+
+        const imageMap = new Map(productImages.filter(p => p.mainImageUrl).map(p => [p.id, p.mainImageUrl!]))
+
+        for (const item of noCover) {
+          const row = rows.find(r => r.id === item.id)
+          if (!row) continue
+          const productIds = (row.productIds || []).filter(Boolean)
+          // 取产品列表中第一个有图片的产品主图作为 fallback
+          const firstWithImage = productIds.find(id => imageMap.has(id))
+          if (firstWithImage) {
+            item.fallbackCoverUrl = imageMap.get(firstWithImage)!
+          }
+        }
+      }
+    }
 
     return { items, total, page, pageSize }
   }
@@ -137,6 +170,7 @@ export class CatalogsService {
       name: catalog.name,
       description: catalog.description ?? null,
       coverImageUrl: catalog.coverImageUrl,
+      fallbackCoverUrl: null,
       status: catalog.status,
       productCount: productIds.length,
       publicUrl: catalog.publicUrl,
@@ -318,12 +352,12 @@ export class CatalogsService {
     return updated ?? null
   }
 
-  /** 发布图册到 R2 */
+  /** 发布图册 (更新状态为 published, 触发 Cloudflare Pages 部署) */
   async publishCatalog(id: string): Promise<{
     publicUrl: string
     productCount: number
+    deployId: string | null
   }> {
-    // 第一步: 读取图册
     const [catalog] = await db
       .select()
       .from(catalogs)
@@ -339,137 +373,57 @@ export class CatalogsService {
       throw new BusinessError(ErrorCode.VALIDATION, '图册中没有关联产品，无法发布')
     }
 
-    // 第二步: 读取关联产品
-    const productRows = await db
-      .select({
-        id: products.id,
-        spuCode: products.spuCode,
-        title: products.title,
-        category: products.category,
-        mainImageUrl: products.mainImageUrl,
-        imagesJson: products.imagesJson,
-        r2BasePath: products.r2BasePath,
-      })
-      .from(products)
-      .where(inArray(products.id, productIds))
+    // 封面 Fallback
+    let coverImageUrl = catalog.coverImageUrl
+    if (!coverImageUrl) {
+      const productRows = await db
+        .select({
+          mainImageUrl: products.mainImageUrl,
+          imagesJson: products.imagesJson,
+        })
+        .from(products)
+        .where(inArray(products.id, productIds))
+        .limit(1)
 
-    if (productRows.length === 0) {
-      throw new BusinessError(ErrorCode.NOT_FOUND, '关联的产品不存在')
-    }
-
-    // 读取所有产品的 SKU
-    const spuCodes = productRows.map(p => p.spuCode).filter(Boolean)
-    const skuRows = await db
-      .select({
-        spuCode: productSkus.spuCode,
-        skuCode: productSkus.skuCode,
-        nameZh: productSkus.nameZh,
-        nameEn: productSkus.nameEn,
-        imageUrl: productSkus.imageUrl,
-        sortOrder: productSkus.sortOrder,
-      })
-      .from(productSkus)
-      .where(inArray(productSkus.spuCode, spuCodes))
-      .orderBy(asc(productSkus.spuCode), asc(productSkus.sortOrder))
-
-    // 按 spuCode 分组 SKU
-    const skusBySpuCode: Record<string, typeof skuRows> = {}
-    for (const sku of skuRows) {
-      if (!skusBySpuCode[sku.spuCode]) {
-        skusBySpuCode[sku.spuCode] = []
-      }
-      skusBySpuCode[sku.spuCode].push(sku)
-    }
-
-    // 第三步: 组装 JSON
-    const catalogJson = {
-      id: catalog.id,
-      name: catalog.name,
-      brand: '雨图饰品',
-      createdAt: catalog.createdAt instanceof Date ? catalog.createdAt.toISOString() : String(catalog.createdAt),
-      coverImageUrl: catalog.coverImageUrl ?? '',
-      products: productRows.map(product => {
-        const imagesJson = product.imagesJson as ImagesJson | null
-
-        const mainImages = (imagesJson?.main ?? []).map((img, idx) => ({
-          index: idx,
-          url: img.r2Url || product.mainImageUrl || '',
-          fileName: img.fileName ?? '',
-        })).filter(img => img.url !== '')
-
-        const productSkusList = skusBySpuCode[product.spuCode] ?? []
-
-        return {
-          spuCode: product.spuCode,
-          title: product.title,
-          category: product.category ?? '',
-          mainImageUrl: mainImages[0]?.url ?? product.mainImageUrl ?? '',
-          images: { main: mainImages },
-          skus: productSkusList.map(sku => ({
-            skuCode: sku.skuCode,
-            nameZh: sku.nameZh,
-            nameEn: sku.nameEn ?? '',
-            imageUrl: sku.imageUrl ?? '',
-          })),
+      if (productRows.length > 0) {
+        const imgJson = productRows[0].imagesJson as ImagesJson | null
+        coverImageUrl = imgJson?.main?.[0]?.r2Url || productRows[0].mainImageUrl || null
+        if (coverImageUrl) {
+          await db
+            .update(catalogs)
+            .set({ coverImageUrl, updatedAt: new Date() })
+            .where(eq(catalogs.id, id))
         }
-      }),
+      }
     }
 
-    const jsonBody = JSON.stringify(catalogJson, null, 2)
-    const r2Key = `catalogs/${catalog.id}.json`
+    const ecatalogBase = process.env.ECATALOG_BASE_URL || 'https://yt.nv315.top'
+    const publicUrl = `${ecatalogBase}/c/${catalog.id}`
 
-    // 第四步: 上传到 R2
-    const r2Endpoint = process.env.R2_ENDPOINT
-    const r2AccessKeyId = process.env.R2_ACCESS_KEY_ID
-    const r2SecretAccessKey = process.env.R2_SECRET_ACCESS_KEY
-    const r2Bucket = process.env.R2_BUCKET
-    const r2CustomDomain = process.env.R2_CUSTOM_DOMAIN || process.env.R2_ENDPOINT
-
-    if (!r2Endpoint || !r2AccessKeyId || !r2SecretAccessKey || !r2Bucket) {
-      throw new Error('R2 环境变量未配置')
-    }
-
-    const s3Client = new S3Client({
-      region: 'auto',
-      endpoint: r2Endpoint,
-      credentials: {
-        accessKeyId: r2AccessKeyId,
-        secretAccessKey: r2SecretAccessKey,
-      },
-    })
-
-    try {
-      await s3Client.send(
-        new PutObjectCommand({
-          Bucket: r2Bucket,
-          Key: r2Key,
-          Body: jsonBody,
-          ContentType: 'application/json',
-        }),
-      )
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err)
-      throw new Error(`R2 上传失败: ${message}`)
-    }
-
-    // 构造公开 URL
-    const publicUrl = `${r2CustomDomain}/${r2Key}`
-
-    // 更新数据库
+    // 更新数据库状态
     await db
       .update(catalogs)
       .set({
         status: 'published',
-        r2Path: r2Key,
         publicUrl,
         publishedAt: new Date(),
         updatedAt: new Date(),
       })
       .where(eq(catalogs.id, id))
 
+    // 触发 Cloudflare Pages 部署 (异步, 不阻塞响应)
+    let deployId: string | null = null
+    try {
+      const result = await triggerDeploy()
+      deployId = result.deployId
+    } catch (err) {
+      console.error('触发 Cloudflare 部署失败:', err instanceof Error ? err.message : String(err))
+    }
+
     return {
       publicUrl,
-      productCount: productRows.length,
+      productCount: productIds.length,
+      deployId,
     }
   }
 

@@ -14,6 +14,7 @@ import { publishRoutes } from './modules/publish'
 import { logsRoutes } from './modules/logs/logs.routes'
 import { catalogsRoutes } from './modules/catalogs'
 import { distributionsModule } from './modules/distributions'
+import { deployRoutes } from './modules/deploy/deploy.routes'
 import { requestIdMiddleware } from './shared/utils'
 import { globalErrorHandler } from './shared/middleware'
 import { logger } from './shared/utils/logger'
@@ -48,6 +49,7 @@ app.route('/api/v1/exports', exportsRoutes)
 app.route('/api/v1/distributors', distributorsRoutes)
 app.route('/api/v1/distributor', distributorApiRoutes)
 app.route('/api/v1/stats', statsRoutes)
+app.route('/api/v1/deploy', deployRoutes)
 
 // ── 健康检查 ──────────────────────────────────────────────────────────────
 
@@ -98,6 +100,11 @@ setInterval(async () => {
 }, 5 * 60 * 1000)
 
 logger.info(' 超时任务清理已启动 (每5分钟)')
+
+// ── Supabase 定时同步 (Docker → Supabase 镜像) ────────────────────────────
+
+import { startSupabaseSync } from './services/supabase-sync'
+startSupabaseSync().catch((err) => logger.error(err, 'Supabase 同步启动失败'))
 
 serve({
   fetch: app.fetch,

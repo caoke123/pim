@@ -4,6 +4,7 @@ import { eq, and, sql, desc, count, asc, inArray } from 'drizzle-orm'
 import { db, schema } from '../../shared/db'
 import { NotFoundError, BusinessError, ErrorCode } from '../../shared/utils/errors'
 import type { DistributionRow, DistributionSkuPriceRow } from '../../shared/types/db'
+import { triggerDeploy } from '../../services/trigger-deploy'
 
 const { distributions, distributionSkuPrices, customers, catalogs, products, productSkus } = schema
 
@@ -109,6 +110,35 @@ export class DistributionsService {
       .limit(pageSize)
       .offset((page - 1) * pageSize)
 
+    // 为无封面的图册，批量查找随机产品主图作为 fallback
+    const noCoverRows = rows.filter(r => r.catalogCoverImageUrl == null)
+    const fallbackMap = new Map<string, string>()
+    if (noCoverRows.length > 0) {
+      const catalogIds = noCoverRows.map(r => r.catalogId!).filter(Boolean)
+      const catalogRows = catalogIds.length > 0
+        ? await db.select({ id: catalogs.id, productIds: catalogs.productIds }).from(catalogs).where(inArray(catalogs.id, catalogIds))
+        : []
+
+      const allProductIds = catalogRows.flatMap(c => (c.productIds || [])).filter(Boolean)
+      if (allProductIds.length > 0) {
+        const productImages = await db
+          .select({ id: products.id, mainImageUrl: products.mainImageUrl })
+          .from(products)
+          .where(inArray(products.id, allProductIds))
+
+        const imageMap = new Map(productImages.filter(p => p.mainImageUrl).map(p => [p.id, p.mainImageUrl!]))
+
+        for (const catRow of catalogRows) {
+          const prodIds = (catRow.productIds || []).filter(Boolean)
+          // 取第一个有图片的产品主图，与 Catalog 页保持一致
+          const firstWithImage = prodIds.find(id => imageMap.has(id))
+          if (firstWithImage) {
+            fallbackMap.set(catRow.id, imageMap.get(firstWithImage)!)
+          }
+        }
+      }
+    }
+
     const items: DistributionListItem[] = await Promise.all(
       rows.map(async (row) => {
         const productCount = row.catalogId
@@ -125,7 +155,7 @@ export class DistributionsService {
           customerNotes: row.customerNotes ?? null,
           catalogId: row.catalogId,
           catalogName: row.catalogName ?? '—',
-          catalogCoverImageUrl: row.catalogCoverImageUrl ?? null,
+          catalogCoverImageUrl: row.catalogCoverImageUrl ?? fallbackMap.get(row.catalogId ?? '') ?? null,
           productCount,
           status: row.status,
           publicUrl: row.publicUrl ?? null,
@@ -257,7 +287,6 @@ export class DistributionsService {
       .limit(1)
     if (!catalog) throw new BusinessError(ErrorCode.NOT_FOUND, '图册不存在')
 
-    const publicUrl = `https://catalog.yutu.nv315.top/d/${catalog.id}`
     const [row] = await db
       .insert(distributions)
       .values({
@@ -265,12 +294,20 @@ export class DistributionsService {
         catalogId: dto.catalogId,
         agreement: dto.agreement?.trim() || null,
         status: 'active',
-        publicUrl,
         operator: 'XP',
       })
       .returning({ id: distributions.id })
 
-    if (row && catalog.productIds?.length) {
+    if (!row?.id) throw new Error('创建分销记录失败')
+
+    const ecatalogBase = process.env.ECATALOG_BASE_URL || 'https://yt.nv315.top'
+    const publicUrl = `${ecatalogBase}/distributions/${row.id}`
+    await db
+      .update(distributions)
+      .set({ publicUrl, updatedAt: new Date() })
+      .where(eq(distributions.id, row.id))
+
+    if (row.id && catalog.productIds?.length) {
       const skuRows = await db
         .select({
           skuId: productSkus.id,
@@ -292,6 +329,11 @@ export class DistributionsService {
         )
       }
     }
+
+    // 异步触发 Cloudflare Pages 部署
+    triggerDeploy().catch(err =>
+      console.error('触发 Cloudflare 部署失败:', err instanceof Error ? err.message : String(err))
+    )
 
     return { id: row?.id ?? '', publicUrl }
   }
@@ -323,6 +365,12 @@ export class DistributionsService {
       .set(updateData)
       .where(eq(distributions.id, id))
       .returning()
+
+    // 触发 Cloudflare Pages 部署
+    triggerDeploy().catch(err =>
+      console.error('触发 Cloudflare 部署失败:', err instanceof Error ? err.message : String(err))
+    )
+
     return row ?? null
   }
 
@@ -352,11 +400,18 @@ export class DistributionsService {
       .limit(1)
     if (!row) return null
 
-    const publicUrl = row.publicUrl || `https://catalog.yutu.nv315.top/d/${row.catalogId}`
+    const ecatalogBase = process.env.ECATALOG_BASE_URL || 'https://yt.nv315.top'
+    const publicUrl = row.publicUrl || `${ecatalogBase}/distributions/${row.id}`
     await db
       .update(distributions)
       .set({ publicUrl, status: 'active', updatedAt: new Date() })
       .where(eq(distributions.id, id))
+
+    // 触发 Cloudflare Pages 部署
+    triggerDeploy().catch(err =>
+      console.error('触发 Cloudflare 部署失败:', err instanceof Error ? err.message : String(err))
+    )
+
     return { publicUrl }
   }
 
@@ -400,6 +455,12 @@ export class DistributionsService {
         })
       count++
     }
+
+    // 触发 Cloudflare Pages 部署
+    triggerDeploy().catch(err =>
+      console.error('触发 Cloudflare 部署失败:', err instanceof Error ? err.message : String(err))
+    )
+
     return count
   }
 }

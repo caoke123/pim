@@ -4,17 +4,18 @@ import {
   Plus, Trash2, FileText, Send, FolderOpen, Eye,
   Folder, Package, Image as ImageIcon, TrendingUp, MoreHorizontal,
   ChevronLeft, ChevronRight, X, Link2,
-  Wifi, BatteryMedium, Signal,
+  Wifi, BatteryMedium, Signal, Loader2,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useThemeStore } from '@/stores/useThemeStore'
 import { CatalogDrawer as CatalogDrawerComponent } from '@/components/CatalogDrawer'
 
 const API_BASE = 'http://localhost:8000/api/v1'
+const ECATALOG_BASE = import.meta.env.VITE_ECATALOG_BASE_URL || `${window.location.protocol}//${window.location.hostname}:3010`
 const PAGE_SIZE = 12
 
 interface Catalog {
-  id: string; name: string; coverImageUrl: string | null
+  id: string; name: string; coverImageUrl: string | null; fallbackCoverUrl: string | null
   status: 'draft' | 'published' | 'deleted'; productCount: number; publicUrl: string | null
   createdAt: string; updatedAt: string
 }
@@ -53,8 +54,8 @@ function MoreMenu({ onDelete }: { onDelete: () => void }) {
 // Phone Mockup Card
 // ═══════════════════════════════════════════════════════════════════
 
-function PhoneCard({ catalog, onView, onPublish, onCopyLink, onDelete, publishing }: {
-  catalog: Catalog; onView: () => void; onPublish: () => void; onCopyLink: () => void; onDelete: () => void; publishing: string | null
+function PhoneCard({ catalog, onView, onPublish, onCopyLink, onDelete, publishing, deploying }: {
+  catalog: Catalog; onView: () => void; onPublish: () => void; onCopyLink: () => void; onDelete: () => void; publishing: string | null; deploying: boolean
 }) {
   const isPublished = catalog.status === 'published'
   const statusLabel = isPublished ? '已发布' : '未发布'
@@ -72,8 +73,8 @@ function PhoneCard({ catalog, onView, onPublish, onCopyLink, onDelete, publishin
       </div>
 
       <div className="relative rounded-[1.25rem] overflow-hidden aspect-[4/5] w-full mt-2 bg-gray-100 shrink-0">
-        {catalog.coverImageUrl ? (
-          <img src={catalog.coverImageUrl} alt={catalog.name} className="w-full h-full object-cover" />
+        {(catalog.coverImageUrl || catalog.fallbackCoverUrl) ? (
+          <img src={(catalog.coverImageUrl || catalog.fallbackCoverUrl)!} alt={catalog.name} className="w-full h-full object-cover" />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
             <Folder className="w-10 h-10 text-gray-200" />
@@ -101,10 +102,17 @@ function PhoneCard({ catalog, onView, onPublish, onCopyLink, onDelete, publishin
             查看
           </button>
           {isPublished ? (
-            <button onClick={onCopyLink} className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-full bg-gray-100 text-xs text-gray-700 hover:bg-orange-50 hover:text-[#f77314] active:scale-95 transition-all">
-              <Link2 className="w-3.5 h-3.5" />
-              复制链接
-            </button>
+            deploying ? (
+              <button disabled className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-full bg-orange-50 text-xs text-orange-600 opacity-70">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                构建中...
+              </button>
+            ) : (
+              <button onClick={onCopyLink} className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-full bg-gray-100 text-xs text-gray-700 hover:bg-orange-50 hover:text-[#f77314] active:scale-95 transition-all">
+                <Link2 className="w-3.5 h-3.5" />
+                复制链接
+              </button>
+            )
           ) : (
             <button onClick={onPublish} disabled={publishing === catalog.id} className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-full bg-gray-100 text-xs text-gray-700 hover:bg-orange-50 hover:text-[#f77314] active:scale-95 transition-all disabled:opacity-40">
               <Send className="w-3.5 h-3.5" />
@@ -181,17 +189,22 @@ export default function CatalogPage() {
   const [newName, setNewName] = useState('')
   const [creating, setCreating] = useState(false)
   const [publishing, setPublishing] = useState<string | null>(null)
+  const [deployingIds, setDeployingIds] = useState<Set<string>>(new Set())
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+
+  const fetchStats = () => {
+    fetch(`${API_BASE}/catalogs/stats`).then(r => r.json()).then(j => j.success && setStats(j.data)).catch(() => {})
+  }
 
   const fetchData = () => {
     setLoading(true)
     fetch(`${API_BASE}/catalogs?page=${page}&pageSize=${PAGE_SIZE}`)
       .then(r => r.json()).then(j => { setCatalogs(j.data?.items ?? []); setTotal(j.data?.total ?? 0) })
       .catch(() => toast.error('获取图册列表失败')).finally(() => setLoading(false))
+    fetchStats()
   }
 
   useEffect(() => { fetchData() }, [page])
-  useEffect(() => { fetch(`${API_BASE}/catalogs/stats`).then(r => r.json()).then(j => j.success && setStats(j.data)).catch(() => {}) }, [])
 
   const handleCreate = async () => {
     if (!newName.trim()) return
@@ -209,6 +222,31 @@ export default function CatalogPage() {
       const r = await fetch(`${API_BASE}/catalogs/${deleteTarget.id}`, { method: 'DELETE' })
       if ((await r.json()).success) { toast.success('已删除'); setDeleteTarget(null); setConfirmOpen(false); setPage(1); fetchData() }
     } catch { toast.error('删除失败') }
+  }
+
+  /** 轮询 Cloudflare Pages 部署状态, 完成后移除构建中间态 */
+  const pollDeployStatus = async (catalogId: string, deployId: string) => {
+    const maxAttempts = 30 // 最多等待 2.5 分钟
+    for (let i = 0; i < maxAttempts; i++) {
+      await new Promise(r => setTimeout(r, 5000)) // 每5秒轮询一次
+      try {
+        const res = await fetch(`${API_BASE}/deploy/status/${deployId}`)
+        const json = await res.json()
+        if (json.code === 0 && json.data?.status === 'success') {
+          toast.success(`构建完成, 图册已生效`)
+          break
+        }
+        if (json.data?.status === 'failure') {
+          toast.error('构建失败, 请查看 Cloudflare Pages 日志')
+          break
+        }
+      } catch { /* 继续轮询 */ }
+    }
+    setDeployingIds(prev => {
+      const next = new Set(prev)
+      next.delete(catalogId)
+      return next
+    })
   }
 
   return (
@@ -270,15 +308,44 @@ export default function CatalogPage() {
                   onView={() => setDrawerCatalog(c)}
                   onPublish={async () => {
                     setPublishing(c.id)
-                    try { const r = await fetch(`${API_BASE}/catalogs/${c.id}/publish`, { method: 'POST' }); const j = await r.json(); if (j.success) { toast.success(`发布成功`); fetchData() } else toast.error(j.message) } catch { toast.error('发布失败') } finally { setPublishing(null) }
+                    try {
+                      const r = await fetch(`${API_BASE}/catalogs/${c.id}/publish`, { method: 'POST' })
+                      const j = await r.json()
+                      if (j.success) {
+                        toast.success(j.data?.deployId ? '已提交构建部署，约20秒后生效' : '发布成功')
+                        fetchData()
+                        // 进入构建中间态
+                        if (j.data?.deployId) {
+                          setDeployingIds(prev => new Set(prev).add(c.id))
+                          pollDeployStatus(c.id, j.data.deployId)
+                        }
+                      } else {
+                        toast.error(j.message ?? '发布失败')
+                      }
+                    } catch { toast.error('发布失败') }
+                    finally { setPublishing(null) }
                   }}
                   onCopyLink={() => {
-                    if (!c.publicUrl) { toast.error('图册尚未发布'); return }
-                    navigator.clipboard.writeText(`${window.location.protocol}//${window.location.hostname}:3010/c/${c.id}`)
-                    toast.success('图册链接已复制')
+                    const url = `${ECATALOG_BASE}/c/${c.id}`
+                    try {
+                      const ta = document.createElement('textarea')
+                      ta.value = url
+                      ta.style.position = 'fixed'
+                      ta.style.left = '-9999px'
+                      ta.style.top = '-9999px'
+                      document.body.appendChild(ta)
+                      ta.focus()
+                      ta.select()
+                      const ok = document.execCommand('copy')
+                      document.body.removeChild(ta)
+                      if (ok) { toast.success('图册链接已复制') } else { toast.error(url, { duration: 8000 }) }
+                    } catch {
+                      toast.error(url, { duration: 8000 })
+                    }
                   }}
                   onDelete={() => { setDeleteTarget(c); setConfirmOpen(true) }}
                   publishing={publishing}
+                  deploying={deployingIds.has(c.id)}
                 />
               ))}
             </div>

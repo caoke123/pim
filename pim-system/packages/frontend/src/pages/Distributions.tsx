@@ -12,6 +12,7 @@ import type { DistributionListItem, CatalogListItem } from '@/api/types'
 import DistributionDrawer, { DrawerShell } from '@/components/DistributionDrawer'
 
 const PAGE_SIZE = 12
+const ECATALOG_BASE = import.meta.env.VITE_ECATALOG_BASE_URL || `${window.location.protocol}//${window.location.hostname}:3010`
 
 const spring = { type: 'spring' as const, stiffness: 300, damping: 30, mass: 0.8 }
 
@@ -28,6 +29,7 @@ export default function Distributions() {
 
   const [showCreate, setShowCreate] = useState(false)
   const [openId, setOpenId] = useState<string | null>(null)
+  const [deploying, setDeploying] = useState(false)
 
   async function load(p = page, k = keyword) {
     setLoading(true)
@@ -46,7 +48,11 @@ export default function Distributions() {
   useEffect(() => { load(1, '') }, [])
 
   const onSearch = () => load(1, keyword)
-  const onRefresh = () => load(page, keyword)
+  const onRefresh = () => {
+    setDeploying(true)
+    setTimeout(() => setDeploying(false), 35000)
+    load(page, keyword)
+  }
 
   async function handleDelete(id: string) {
     try {
@@ -59,8 +65,25 @@ export default function Distributions() {
   }
 
   function copyPublicUrl(url: string) {
-    navigator.clipboard.writeText(url)
-    toast.success('链接已复制')
+    try {
+      const ta = document.createElement('textarea')
+      ta.value = url
+      ta.style.position = 'fixed'
+      ta.style.left = '-9999px'
+      ta.style.top = '-9999px'
+      document.body.appendChild(ta)
+      ta.focus()
+      ta.select()
+      const ok = document.execCommand('copy')
+      document.body.removeChild(ta)
+      if (ok) { toast.success('链接已复制') } else { toast.error(url, { duration: 8000 }) }
+    } catch {
+      toast.error(url, { duration: 8000 })
+    }
+  }
+
+  function copyEcatalogLink(id: string) {
+    copyPublicUrl(`${ECATALOG_BASE}/distributions/${id}`)
   }
 
   return (
@@ -118,8 +141,9 @@ export default function Distributions() {
                 key={item.id}
                 item={item}
                 onOpen={() => setOpenId(item.id)}
-                onCopy={() => item.publicUrl && copyPublicUrl(item.publicUrl)}
+                onCopy={() => item.publicUrl && copyEcatalogLink(item.id)}
                 onDelete={() => handleDelete(item.id)}
+                deploying={deploying}
               />
             ))}
           </AnimatePresence>
@@ -156,6 +180,7 @@ export default function Distributions() {
         {openId && (
           <DistributionDrawer
             distributionId={openId}
+            deploying={deploying}
             onClose={() => { setOpenId(null); onRefresh() }}
           />
         )}
@@ -171,12 +196,13 @@ export default function Distributions() {
 // ═══════════════════════════════════════════════════════════════════
 
 function DistributionCard({
-  item, onOpen, onCopy, onDelete,
+  item, onOpen, onCopy, onDelete, deploying,
 }: {
   item: DistributionListItem
   onOpen: () => void
   onCopy: () => void
   onDelete: () => Promise<void>
+  deploying: boolean
 }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [showConfirmDelete, setShowConfirmDelete] = useState(false)
@@ -285,10 +311,24 @@ function DistributionCard({
           </button>
 
           <button
-            onClick={(e) => { e.stopPropagation(); handleCopyClick() }}
-            className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-normal rounded-lg border border-[#635BFF]/10 bg-[#635BFF]/5 text-[#635BFF] hover:bg-[#635BFF] hover:text-white transition-all duration-150 focus:outline-none shadow-sm shadow-[#635BFF]/5">
-            <Copy className="w-3 h-3 shrink-0" />
-            复制链接
+            onClick={(e) => { e.stopPropagation(); if (!deploying) handleCopyClick() }}
+            disabled={deploying}
+            className={`flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-normal rounded-lg border transition-all duration-150 focus:outline-none shadow-sm ${
+              deploying
+                ? 'border-orange-200 bg-orange-50 text-orange-600 opacity-70'
+                : 'border-[#635BFF]/10 bg-[#635BFF]/5 text-[#635BFF] hover:bg-[#635BFF] hover:text-white shadow-[#635BFF]/5'
+            }`}>
+            {deploying ? (
+              <>
+                <Loader2 className="w-3 h-3 shrink-0 animate-spin" />
+                构建中...
+              </>
+            ) : (
+              <>
+                <Copy className="w-3 h-3 shrink-0" />
+                复制链接
+              </>
+            )}
           </button>
 
           <div className="relative">
@@ -604,8 +644,8 @@ function BindCatalogView({ customerId, onBound }: { customerId: string; onBound:
                 }}>
                 <div className="relative w-full overflow-hidden bg-gray-100 shrink-0"
                   style={{ height: 180, borderRadius: '1rem' }}>
-                  {c.coverImageUrl ? (
-                    <img src={c.coverImageUrl} alt={c.name} className="w-full h-full object-cover" />
+                  {c.coverImageUrl || c.fallbackCoverUrl ? (
+                    <img src={(c.coverImageUrl || c.fallbackCoverUrl)!} alt={c.name} className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center" style={{ color: 'var(--text-tertiary)' }}>
                       <FileText className="w-8 h-8" />

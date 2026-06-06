@@ -123,6 +123,7 @@ export interface CatalogListItem {
   name: string
   description: string | null
   coverImageUrl: string | null
+  fallbackCoverUrl: string | null
   productCount: number
   status: 'draft' | 'published' | 'archived'
   publicUrl: string | null

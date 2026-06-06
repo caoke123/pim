@@ -17,6 +17,8 @@ import { toast } from 'sonner'
 import { api } from '@/api/client'
 import type { DistributionDetail, DistributionSkuItem, CustomerListItem, CatalogListItem } from '@/api/types'
 
+const ECATALOG_BASE = import.meta.env.VITE_ECATALOG_BASE_URL || `${window.location.protocol}//${window.location.hostname}:3010`
+
 const spring = { type: 'spring' as const, stiffness: 300, damping: 30, mass: 0.8 }
 const TABS = [
   { key: 'catalog', label: '图册绑定' },
@@ -27,9 +29,10 @@ const TABS = [
 
 type TabKey = (typeof TABS)[number]['key']
 
-export default function DistributionDrawer({ distributionId, defaultTab, onClose }: {
+export default function DistributionDrawer({ distributionId, defaultTab, deploying, onClose }: {
   distributionId: string
   defaultTab?: TabKey
+  deploying?: boolean
   onClose: () => void
 }) {
   const [detail, setDetail] = useState<DistributionDetail | null>(null)
@@ -65,21 +68,43 @@ export default function DistributionDrawer({ distributionId, defaultTab, onClose
             <h2 className="text-[18px] font-semibold flex-1 truncate" style={{ color: 'var(--text-primary)' }}>
               {detail.customerName} · {detail.catalogName}
             </h2>
-            <CopyLinkButton url={detail.publicUrl} />
+            <CopyLinkButton url={detail.publicUrl ? `${ECATALOG_BASE}/distributions/${detail.id}` : null} />
             <button
-              onClick={async () => {
+              onClick={() => {
+                if (deploying) return
                 if (!detail.publicUrl) {
                   toast.error('请先生成链接')
                   return
                 }
-                await navigator.clipboard.writeText(detail.publicUrl)
-                toast.success('链接已复制')
+                const ecatalogUrl = `${ECATALOG_BASE}/distributions/${detail.id}`
+                try {
+                  const ta = document.createElement('textarea')
+                  ta.value = ecatalogUrl
+                  ta.style.position = 'fixed'
+                  ta.style.left = '-9999px'
+                  ta.style.top = '-9999px'
+                  document.body.appendChild(ta)
+                  ta.focus()
+                  ta.select()
+                  const ok = document.execCommand('copy')
+                  document.body.removeChild(ta)
+                  if (ok) { toast.success('链接已复制') } else { toast.error(ecatalogUrl, { duration: 8000 }) }
+                } catch {
+                  toast.error(ecatalogUrl, { duration: 8000 })
+                }
               }}
-              className="h-9 px-3 rounded-full text-[12px] font-medium flex items-center gap-1.5 transition-all active:scale-95"
-              style={{ backgroundColor: 'var(--accent)', color: 'var(--text-inverse)' }}
-              onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--accent-hover)')}
-              onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'var(--accent)')}>
-              <Copy className="w-3.5 h-3.5" />复制链接
+              disabled={deploying}
+              className={`h-9 px-3 rounded-full text-[12px] font-medium flex items-center gap-1.5 transition-all active:scale-95 ${
+                deploying ? 'opacity-70' : ''
+              }`}
+              style={{ backgroundColor: deploying ? 'var(--bg-surface)' : 'var(--accent)', color: deploying ? 'var(--text-secondary)' : 'var(--text-inverse)' }}
+              onMouseEnter={e => { if (!deploying) (e.currentTarget.style.backgroundColor = 'var(--accent-hover)') }}
+              onMouseLeave={e => { if (!deploying) (e.currentTarget.style.backgroundColor = 'var(--accent)') }}>
+              {deploying ? (
+                <><Loader2 className="w-3.5 h-3.5 animate-spin" />构建中...</>
+              ) : (
+                <><Copy className="w-3.5 h-3.5" />复制链接</>
+              )}
             </button>
           </div>
           <div className="flex items-center gap-1">
@@ -169,9 +194,22 @@ function CopyLinkButton({ url }: { url: string | null }) {
   if (!url) return null
   return (
     <button
-      onClick={async () => {
-        await navigator.clipboard.writeText(url)
-        toast.success('链接已复制')
+      onClick={() => {
+        try {
+          const ta = document.createElement('textarea')
+          ta.value = url
+          ta.style.position = 'fixed'
+          ta.style.left = '-9999px'
+          ta.style.top = '-9999px'
+          document.body.appendChild(ta)
+          ta.focus()
+          ta.select()
+          const ok = document.execCommand('copy')
+          document.body.removeChild(ta)
+          if (ok) { toast.success('链接已复制') } else { toast.error(url, { duration: 8000 }) }
+        } catch {
+          toast.error(url, { duration: 8000 })
+        }
       }}
       className="h-9 px-3 rounded-full text-[12px] font-medium flex items-center gap-1.5 transition-all active:scale-95"
       style={{ backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)', border: '1px solid var(--border-default)' }}>
@@ -844,8 +882,8 @@ function CatalogTab({ detail, onUpdate }: { detail: DistributionDetail; onUpdate
                 }}>
                   <div className="relative w-full overflow-hidden bg-gray-100 shrink-0"
                     style={{ height: 180, borderRadius: '1rem' }}>
-                  {c.coverImageUrl ? (
-                    <img src={c.coverImageUrl} alt={c.name} className="w-full h-full object-cover" />
+                  {c.coverImageUrl || c.fallbackCoverUrl ? (
+                    <img src={(c.coverImageUrl || c.fallbackCoverUrl)!} alt={c.name} className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center" style={{ color: 'var(--text-tertiary)' }}>
                       <FileText className="w-8 h-8" />
