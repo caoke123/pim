@@ -1,60 +1,30 @@
-/** packages/backend/src/routes/sync.ts — R2 同步相关路由 */
-
+/** packages/backend/src/routes/sync.ts — 同步日志查询路由 */
 import { Hono } from 'hono'
 import { desc, eq } from 'drizzle-orm'
-import { db } from '../db'
-import { syncLogs } from '../db/schema'
-import { R2Service } from '../services/r2'
-import { SyncService } from '../services/sync'
-import type { ApiResponse, PaginatedResponse, SyncLogRecord } from '@yuntu/shared'
+import { db, schema } from '../shared/db'
 
+const { syncLogs } = schema
 const syncApp = new Hono()
 
-// 初始化服务单例
-const r2Service = new R2Service()
-const syncService = new SyncService(r2Service)
-
-/** 导出供入口文件使用 */
-export { r2Service, syncService }
-
-/** 安全获取数值，null → 0 */
 function nu(val: number | null): number {
   return val ?? 0
 }
 
-// ── POST /api/v1/sync/trigger ─────────────────────────────────────────────
+interface SyncLogItem {
+  id: string
+  trigger: string
+  totalScanned: number
+  newCount: number
+  updatedCount: number
+  skippedCount: number
+  failedCount: number
+  status: string
+  errorMessage: string | null
+  startedAt: string
+  completedAt: string | null
+}
 
-syncApp.post('/trigger', async (c) => {
-  try {
-    const startedAt = new Date()
-
-    // 创建同步日志记录
-    const [log] = await db
-      .insert(syncLogs)
-      .values({
-        trigger: 'manual',
-        status: 'running',
-        startedAt,
-      })
-      .returning()
-
-    // 后台异步执行同步，不阻塞响应
-    syncService.runSync('manual', log.id).catch((error) => {
-      console.error('后台同步失败:', error)
-    })
-
-    const response: ApiResponse<{ message: string; logId: string }> = {
-      data: { message: '同步已启动', logId: log.id },
-    }
-    return c.json(response)
-  } catch (error) {
-    console.error('触发同步失败:', error)
-    return c.json({ data: null, error: '触发同步失败' }, 500)
-  }
-})
-
-// ── GET /api/v1/sync/status ───────────────────────────────────────────────
-
+// GET /api/v1/sync/status
 syncApp.get('/status', async (c) => {
   try {
     const [currentLog] = await db
@@ -66,33 +36,30 @@ syncApp.get('/status', async (c) => {
 
     const isRunning = !!currentLog
 
-    const mappedLog: SyncLogRecord | null = currentLog
+    const mappedLog: SyncLogItem | null = currentLog
       ? {
           id: currentLog.id,
-          trigger: currentLog.trigger as 'auto' | 'manual',
+          trigger: currentLog.trigger,
           totalScanned: nu(currentLog.totalScanned),
           newCount: nu(currentLog.newCount),
           updatedCount: nu(currentLog.updatedCount),
           skippedCount: nu(currentLog.skippedCount),
           failedCount: nu(currentLog.failedCount),
-          status: currentLog.status as 'running' | 'done' | 'failed',
+          status: currentLog.status,
           errorMessage: currentLog.errorMessage,
           startedAt: currentLog.startedAt.toISOString(),
           completedAt: currentLog.completedAt?.toISOString() ?? null,
         }
       : null
 
-    return c.json({
-      data: { isRunning, currentLog: mappedLog },
-    })
+    return c.json({ data: { isRunning, currentLog: mappedLog } })
   } catch (error) {
     console.error('获取同步状态失败:', error)
     return c.json({ data: null, error: '获取同步状态失败' }, 500)
   }
 })
 
-// ── GET /api/v1/sync/logs ─────────────────────────────────────────────────
-
+// GET /api/v1/sync/logs
 syncApp.get('/logs', async (c) => {
   try {
     const page = Math.max(1, Number(c.req.query('page')) || 1)
@@ -105,47 +72,28 @@ syncApp.get('/logs', async (c) => {
       .limit(pageSize)
       .offset((page - 1) * pageSize)
 
-    const items: SyncLogRecord[] = logs.map((log) => ({
+    const items: SyncLogItem[] = logs.map((log) => ({
       id: log.id,
-      trigger: log.trigger as 'auto' | 'manual',
+      trigger: log.trigger,
       totalScanned: nu(log.totalScanned),
       newCount: nu(log.newCount),
       updatedCount: nu(log.updatedCount),
       skippedCount: nu(log.skippedCount),
       failedCount: nu(log.failedCount),
-      status: log.status as 'running' | 'done' | 'failed',
+      status: log.status,
       errorMessage: log.errorMessage,
       startedAt: log.startedAt.toISOString(),
       completedAt: log.completedAt?.toISOString() ?? null,
     }))
 
-    const response: ApiResponse<PaginatedResponse<SyncLogRecord>> = {
-      data: { items, total: items.length, page, pageSize },
-    }
-    return c.json(response)
+    return c.json({ data: { items, total: items.length, page, pageSize } })
   } catch (error) {
     console.error('获取同步日志失败:', error)
     return c.json({ data: null, error: '获取同步日志失败' }, 500)
   }
 })
 
-// ── GET /api/v1/sync/test-connection ──────────────────────────────────────
-
-syncApp.get('/test-connection', async (c) => {
-  try {
-    const result = await r2Service.testConnection()
-    return c.json({
-      data: { success: result.success, error: result.error },
-    })
-  } catch (error) {
-    return c.json({
-      data: { success: false, error: String(error) },
-    })
-  }
-})
-
-// ── GET /api/v1/sync/logs/:id ─────────────────────────────────────────────
-
+// GET /api/v1/sync/logs/:id
 syncApp.get('/logs/:id', async (c) => {
   try {
     const id = c.req.param('id')
@@ -160,15 +108,15 @@ syncApp.get('/logs/:id', async (c) => {
       return c.json({ data: null, error: '同步日志不存在' }, 404)
     }
 
-    const item: SyncLogRecord = {
+    const item: SyncLogItem = {
       id: log.id,
-      trigger: log.trigger as 'auto' | 'manual',
+      trigger: log.trigger,
       totalScanned: nu(log.totalScanned),
       newCount: nu(log.newCount),
       updatedCount: nu(log.updatedCount),
       skippedCount: nu(log.skippedCount),
       failedCount: nu(log.failedCount),
-      status: log.status as 'running' | 'done' | 'failed',
+      status: log.status,
       errorMessage: log.errorMessage,
       startedAt: log.startedAt.toISOString(),
       completedAt: log.completedAt?.toISOString() ?? null,

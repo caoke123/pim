@@ -19,6 +19,8 @@ interface ProductDrawerProps {
 
 const tabLabels: Record<string, string> = { basic: '基础信息', sku: 'SKU 规格', images: '图片', publish: '发布状态' }
 
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000') + '/api/v1'
+
 const springDrawer = { type: 'spring' as const, stiffness: 300, damping: 30, mass: 0.8 }
 
 export default function ProductDrawer({ open, product, products, onClose, onNavigate, onRefresh }: ProductDrawerProps) {
@@ -218,7 +220,7 @@ function SkuTab({ product, onRefresh }: { product: Product; onRefresh?: () => Pr
 
   const saveSingleField = useCallback(async (skuId: string, field: string, newValue: number) => {
     if (!productId) throw new Error('productId missing')
-    const res = await fetch(`http://localhost:8000/api/v1/products/${productId}/skus`, {
+    const res = await fetch(`${API_BASE}/products/${productId}/skus`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ skus: [{ skuId, [field]: newValue }] }),
@@ -233,7 +235,7 @@ function SkuTab({ product, onRefresh }: { product: Product; onRefresh?: () => Pr
     if (!productId) throw new Error('productId missing')
     const currentSize = sku.size || { length: 0, width: 0, height: 0, unit: 'cm' }
     const fullSize = { ...currentSize, [field]: newValue }
-    const res = await fetch(`http://localhost:8000/api/v1/products/${productId}/skus`, {
+    const res = await fetch(`${API_BASE}/products/${productId}/skus`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ skus: [{ skuId, sizeJson: fullSize }] }),
@@ -271,7 +273,7 @@ function SkuTab({ product, onRefresh }: { product: Product; onRefresh?: () => Pr
 
       if (updates.length === 0) { setBatchStatus('idle'); return }
 
-      const res = await fetch(`http://localhost:8000/api/v1/products/${productId}/skus`, {
+      const res = await fetch(`${API_BASE}/products/${productId}/skus`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ skus: updates }),

@@ -45,8 +45,6 @@ export default function Topbar() {
           <>
             <StatusChip dotColor={agent.online ? 'var(--success)' : 'var(--text-tertiary)'} label={agent.online ? `在线运行 · ${agent.machineName}` : '离线'} active={agent.online} />
             <div style={{ width: 1, height: 12, backgroundColor: 'var(--border-default)' }} />
-            <StatusChip dotColor={agent.cdpConnected ? 'var(--status-live)' : 'var(--text-tertiary)'} label={agent.cdpConnected ? 'Shopee 已连接' : 'Shopee 未连接'} active={agent.cdpConnected} />
-            <div style={{ width: 1, height: 12, backgroundColor: 'var(--border-default)' }} />
             <StatusChip dotColor="var(--accent)" label="同步运行中" active={false} />
           </>
         )}

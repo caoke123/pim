@@ -4,6 +4,7 @@ import { eq, ne, desc, count, asc } from 'drizzle-orm'
 import { db, schema } from '../../shared/db'
 import { NotFoundError, BusinessError, ErrorCode } from '../../shared/utils/errors'
 import type { CustomerRow, CustomerInsert } from '../../shared/types/db'
+import { triggerDeploy } from '../../services/trigger-deploy'
 
 const { customers } = schema
 
@@ -106,13 +107,13 @@ export class CustomersService {
     return row
   }
 
-  async update(id: string, dto: UpdateCustomerDTO): Promise<CustomerRow | null> {
+  async update(id: string, dto: UpdateCustomerDTO): Promise<{ row: CustomerRow | null; deployId: string | null }> {
     const [existing] = await db
       .select()
       .from(customers)
       .where(eq(customers.id, id))
       .limit(1)
-    if (!existing) return null
+    if (!existing) return { row: null, deployId: null }
 
     const updateData: Record<string, unknown> = { updatedAt: new Date() }
     if (dto.name !== undefined) {
@@ -129,7 +130,17 @@ export class CustomersService {
       .set(updateData)
       .where(eq(customers.id, id))
       .returning()
-    return updated ?? null
+
+    // 客户信息变更后自动触发 Cloudflare Pages 部署
+    let deployId: string | null = null
+    try {
+      const result = await triggerDeploy()
+      deployId = result.deployId
+    } catch (err) {
+      console.error('触发 Cloudflare 部署失败:', err instanceof Error ? err.message : String(err))
+    }
+
+    return { row: updated ?? null, deployId }
   }
 
   async softDelete(id: string): Promise<boolean> {

@@ -8,6 +8,7 @@ import type {
   assets,
   publishLogs,
   pimPublishTasks,
+  syncLogs,
   catalogs,
   customers,
   distributions,
@@ -35,6 +36,10 @@ export type PublishLogRow = typeof publishLogs.$inferSelect
 // ── PIM 发布任务表 ──
 export type PimPublishTaskRow = typeof pimPublishTasks.$inferSelect
 export type PublishTaskInsert = typeof pimPublishTasks.$inferInsert
+
+// ── 同步日志 ──
+export type SyncLogRow = typeof syncLogs.$inferSelect
+export type SyncLogInsert = typeof syncLogs.$inferInsert
 
 // ── 图册表 ──
 export type CatalogRow = typeof catalogs.$inferSelect

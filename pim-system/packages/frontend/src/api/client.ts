@@ -1,6 +1,6 @@
 /** api/client.ts — 前端 API 客户端 */
 
-const API_BASE = 'http://localhost:8000/api/v1'
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000') + '/api/v1'
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const url = `${API_BASE}${path}`
@@ -59,7 +59,7 @@ export const api = {
 
   /** 更新客户 */
   updateCustomer(id: string, body: { name?: string; contactPerson?: string; phone?: string; wechat?: string; notes?: string }) {
-    return request<import('./types').ApiEnvelope<{ id: string }>>(`/distributions/customers/${id}`, { method: 'PATCH', body: JSON.stringify(body) })
+    return request<import('./types').ApiEnvelope<{ id: string; deployId?: string | null }>>(`/distributions/customers/${id}`, { method: 'PATCH', body: JSON.stringify(body) })
   },
 
   /** 删除客户 */
@@ -82,26 +82,26 @@ export const api = {
 
   /** 创建分销 */
   createDistribution(body: { customerId: string; catalogId: string; agreement?: string }) {
-    return request<import('./types').ApiEnvelope<{ id: string; publicUrl: string | null }>>('/distributions', { method: 'POST', body: JSON.stringify(body) })
+    return request<import('./types').ApiEnvelope<{ id: string; publicUrl: string | null; deployId: string | null }>>('/distributions', { method: 'POST', body: JSON.stringify(body) })
   },
 
   /** 更新分销 */
   updateDistribution(id: string, body: { agreement?: string; status?: 'active' | 'inactive'; customerId?: string; catalogId?: string }) {
-    return request<import('./types').ApiEnvelope<{ id: string }>>(`/distributions/${id}`, { method: 'PATCH', body: JSON.stringify(body) })
+    return request<import('./types').ApiEnvelope<{ id: string; deployId?: string | null }>>(`/distributions/${id}`, { method: 'PATCH', body: JSON.stringify(body) })
   },
 
   /** 删除分销 */
   deleteDistribution(id: string) {
-    return request<import('./types').ApiEnvelope<null>>(`/distributions/${id}`, { method: 'DELETE' })
+    return request<import('./types').ApiEnvelope<{ deployId?: string | null }>>(`/distributions/${id}`, { method: 'DELETE' })
   },
 
   /** 发布分销 */
   publishDistribution(id: string) {
-    return request<import('./types').ApiEnvelope<{ publicUrl: string | null }>>(`/distributions/${id}/publish`, { method: 'POST' })
+    return request<import('./types').ApiEnvelope<{ publicUrl: string | null; deployId: string | null }>>(`/distributions/${id}/publish`, { method: 'POST' })
   },
 
   /** 批量更新分销价格 */
   upsertDistributionPrices(id: string, items: { skuId: string; customerPrice: number | null }[]) {
-    return request<import('./types').ApiEnvelope<{ updated: number }>>(`/distributions/${id}/prices`, { method: 'POST', body: JSON.stringify({ items }) })
+    return request<import('./types').ApiEnvelope<{ updated: number; deployId?: string | null }>>(`/distributions/${id}/prices`, { method: 'POST', body: JSON.stringify({ items }) })
   },
 }

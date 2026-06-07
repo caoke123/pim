@@ -29,7 +29,7 @@ export default function Distributions() {
 
   const [showCreate, setShowCreate] = useState(false)
   const [openId, setOpenId] = useState<string | null>(null)
-  const [deploying, setDeploying] = useState(false)
+  const [deployingIds, setDeployingIds] = useState<Set<string>>(new Set())
 
   async function load(p = page, k = keyword) {
     setLoading(true)
@@ -48,16 +48,13 @@ export default function Distributions() {
   useEffect(() => { load(1, '') }, [])
 
   const onSearch = () => load(1, keyword)
-  const onRefresh = () => {
-    setDeploying(true)
-    setTimeout(() => setDeploying(false), 35000)
-    load(page, keyword)
-  }
+  const onRefresh = () => load(page, keyword)
 
   async function handleDelete(id: string) {
     try {
-      await api.deleteDistribution(id)
-      toast.success('已移除')
+      const res = await api.deleteDistribution(id)
+      toast.success('已移除, 链接即将失效')
+      if (res.data?.deployId) handleDeployStart(id, res.data.deployId)
       onRefresh()
     } catch (e) {
       toast.error('删除失败')
@@ -84,6 +81,41 @@ export default function Distributions() {
 
   function copyEcatalogLink(id: string) {
     copyPublicUrl(`${ECATALOG_BASE}/distributions/${id}`)
+  }
+
+  /** 真实轮询 Cloudflare Pages 部署状态 */
+  const handleDeployStart = (distId: string, deployId: string | null) => {
+    if (!deployId) return
+    setDeployingIds(prev => new Set(prev).add(distId))
+    ;(async () => {
+      const maxAttempts = 30
+      for (let i = 0; i < maxAttempts; i++) {
+        await new Promise(r => setTimeout(r, 5000))
+        try {
+          const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/v1/deploy/status/${deployId}`)
+          const json = await res.json()
+          if (json.code === 0 && json.data?.status === 'success') {
+            toast.success('构建完成, 分销链接已生效')
+            break
+          }
+          if (json.data?.status === 'failure') {
+            toast.error('构建失败, 请查看 Cloudflare Pages 日志')
+            break
+          }
+        } catch { /* 继续轮询 */ }
+      }
+      setDeployingIds(prev => {
+        const next = new Set(prev)
+        next.delete(distId)
+        return next
+      })
+    })()
+  }
+
+  /** 创建分销时触发部署 */
+  const handleCreateDeployStart = (deployId: string | null) => {
+    if (!deployId) return
+    handleDeployStart(items[0]?.id || '', deployId)
   }
 
   return (
@@ -143,7 +175,7 @@ export default function Distributions() {
                 onOpen={() => setOpenId(item.id)}
                 onCopy={() => item.publicUrl && copyEcatalogLink(item.id)}
                 onDelete={() => handleDelete(item.id)}
-                deploying={deploying}
+                deploying={deployingIds.has(item.id)}
               />
             ))}
           </AnimatePresence>
@@ -175,13 +207,15 @@ export default function Distributions() {
           <NewDistributionDrawer
             onClose={() => setShowCreate(false)}
             onRefresh={() => load(page, keyword)}
+            onDeployStart={handleCreateDeployStart}
           />
         )}
         {openId && (
           <DistributionDrawer
             distributionId={openId}
-            deploying={deploying}
+            deploying={deployingIds.has(openId)}
             onClose={() => { setOpenId(null); onRefresh() }}
+            onDeployTriggered={(deployId) => handleDeployStart(openId, deployId)}
           />
         )}
       </AnimatePresence>
@@ -436,7 +470,7 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
 
 const ACCENT_PURPLE = '#8B7FFF'
 
-function NewDistributionDrawer({ onClose, onRefresh }: { onClose: () => void; onRefresh: () => void }) {
+function NewDistributionDrawer({ onClose, onRefresh, onDeployStart }: { onClose: () => void; onRefresh: () => void; onDeployStart?: (deployId: string | null) => void }) {
   const [view, setView] = useState<'create' | 'bind'>('create')
   const [customerId, setCustomerId] = useState<string | null>(null)
 
@@ -555,7 +589,7 @@ function NewDistributionDrawer({ onClose, onRefresh }: { onClose: () => void; on
         </div>
         <div className="flex-1 overflow-y-auto p-6">
           <BindCatalogView customerId={customerId!}
-            onBound={() => { onRefresh(); setTimeout(() => onClose(), 700) }} />
+            onBound={(deployId) => { onRefresh(); onDeployStart?.(deployId ?? null); setTimeout(() => onClose(), 700) }} />
         </div>
       </div>
     </motion.div>
@@ -574,7 +608,7 @@ function NewDistributionDrawer({ onClose, onRefresh }: { onClose: () => void; on
 
 // ── Catalog selection view for new customers ──
 
-function BindCatalogView({ customerId, onBound }: { customerId: string; onBound: () => void }) {
+function BindCatalogView({ customerId, onBound }: { customerId: string; onBound: (deployId: string | null) => void }) {
   const [catalogs, setCatalogs] = useState<CatalogListItem[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -599,9 +633,9 @@ function BindCatalogView({ customerId, onBound }: { customerId: string; onBound:
   async function handleBind(catalogId: string) {
     setBinding(catalogId)
     try {
-      const res =       await api.createDistribution({ customerId, catalogId })
+      const res = await api.createDistribution({ customerId, catalogId })
       toast.success('图册绑定成功，分销客户创建完毕！', { duration: 3000 })
-      onBound()
+      onBound(res.data?.deployId ?? null)
     } catch {
       toast.error('绑定失败')
     } finally {

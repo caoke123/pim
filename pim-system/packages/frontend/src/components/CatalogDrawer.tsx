@@ -19,7 +19,7 @@ import { toast } from 'sonner'
 import { api } from '@/api/client'
 import type { ProductListItem } from '@/api/types'
 
-const API_BASE = 'http://localhost:8000/api/v1'
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000') + '/api/v1'
 const spring = { type: 'spring' as const, stiffness: 300, damping: 30, mass: 0.8 }
 const MAX_DESC = 200
 
@@ -213,11 +213,12 @@ function SortableProductCard({ product, onEdit, onDelete }: {
 // Catalog Drawer
 // ═══════════════════════════════════════════════════════════════════
 
-export function CatalogDrawer({ open, catalog, onClose, onRefresh }: {
+export function CatalogDrawer({ open, catalog, onClose, onRefresh, onDeployTriggered }: {
   open: boolean
   catalog: CatalogBrief | null
   onClose: () => void
   onRefresh: () => void
+  onDeployTriggered?: (deployId: string) => void
 }) {
   const [tab, setTab] = useState<'products' | 'cover' | 'info'>('products')
   const [detail, setDetail] = useState<CatalogDetail | null>(null)
@@ -273,6 +274,7 @@ export function CatalogDrawer({ open, catalog, onClose, onRefresh }: {
       })
       const j = await r.json()
       if (!j.success) throw new Error(j.message)
+      if (j.data?.deployId) onDeployTriggered?.(j.data.deployId)
     } catch (err) {
       toast.error('排序失败')
       if (detail) loadDetail(detail.id)
@@ -297,12 +299,14 @@ export function CatalogDrawer({ open, catalog, onClose, onRefresh }: {
     ]
     await persistProducts(newProducts as any)
     loadDetail(detail.id)
+    onRefresh()
     toast.success(`已添加 ${ids.length} 个产品`)
   }
 
   const handleRemoveProduct = async (id: string) => {
     if (!detail) return
     await persistProducts(detail.products.filter(p => p.id !== id))
+    onRefresh()
     toast.success('已从图册移除')
   }
 
@@ -340,6 +344,7 @@ export function CatalogDrawer({ open, catalog, onClose, onRefresh }: {
       })
       const j = await r.json()
       if (!j.success) throw new Error(j.message)
+      if (j.data?.deployId) onDeployTriggered?.(j.data.deployId)
       toast.success('封面上传成功')
       loadDetail(detail.id)
       onRefresh()
@@ -362,6 +367,7 @@ export function CatalogDrawer({ open, catalog, onClose, onRefresh }: {
       })
       const j = await r.json()
       if (!j.success) throw new Error(j.message)
+      if (j.data?.deployId) onDeployTriggered?.(j.data.deployId)
       toast.success('保存成功')
       loadDetail(detail.id)
       onRefresh()

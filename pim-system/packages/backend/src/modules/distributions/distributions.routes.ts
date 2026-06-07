@@ -62,16 +62,16 @@ distributionsRoutes.patch('/:id', async (c) => {
   if (!parsed.success) {
     throw new BusinessError(ErrorCode.VALIDATION, parsed.error.issues[0]?.message ?? '参数错误')
   }
-  const row = await distributionsService.update(id, parsed.data)
+  const { row, deployId } = await distributionsService.update(id, parsed.data)
   if (!row) throw new NotFoundError(ErrorCode.NOT_FOUND, '分销记录不存在')
-  return c.json({ code: 0, message: 'ok', data: row })
+  return c.json({ code: 0, message: 'ok', data: { ...row, deployId } })
 })
 
 distributionsRoutes.delete('/:id', async (c) => {
   const id = c.req.param('id')
-  const ok = await distributionsService.softDelete(id)
+  const { ok, deployId } = await distributionsService.softDelete(id)
   if (!ok) throw new NotFoundError(ErrorCode.NOT_FOUND, '分销记录不存在')
-  return c.json({ code: 0, message: 'ok' })
+  return c.json({ code: 0, message: 'ok', data: { deployId } })
 })
 
 distributionsRoutes.post('/:id/publish', async (c) => {
@@ -88,8 +88,8 @@ distributionsRoutes.post('/:id/prices', async (c) => {
   if (!parsed.success) {
     throw new BusinessError(ErrorCode.VALIDATION, parsed.error.issues[0]?.message ?? '参数错误')
   }
-  const count = await distributionsService.upsertPrices(id, parsed.data.items)
-  return c.json({ code: 0, message: 'ok', data: { updated: count } })
+  const { count, deployId } = await distributionsService.upsertPrices(id, parsed.data.items)
+  return c.json({ code: 0, message: 'ok', data: { updated: count, deployId } })
 })
 
 export { distributionsRoutes }

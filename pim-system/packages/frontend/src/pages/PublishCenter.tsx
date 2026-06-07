@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Play, Loader2 } from 'lucide-react'
+import { Play, Loader2, CheckCircle2, Sparkles } from 'lucide-react'
 import PageContainer from '@/components/PageContainer'
 import { useTheme } from '@/hooks/useTheme'
 import { api } from '@/api/client'
 import type { ProductListItem } from '@/api/types'
 
-const API_BASE = 'http://localhost:8000/api/v1'
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000') + '/api/v1'
 
 const platforms = [
   { name: 'Shopee', active: true, port: 13000 },
@@ -42,6 +42,12 @@ interface SSELog {
   timestamp: string
 }
 
+interface LogEntry {
+  nodeId: string
+  message: string
+  status: 'active' | 'done' | 'pending'
+}
+
 export default function PublishCenter() {
   const { theme } = useTheme()
   const [products, setProducts] = useState<PublishProduct[]>([])
@@ -51,11 +57,13 @@ export default function PublishCenter() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [showConfirm, setShowConfirm] = useState(false)
   const [terminal, setTerminal] = useState(false)
-  const [terminalLogs, setTerminalLogs] = useState<string[]>([])
+  const [terminalLogs, setTerminalLogs] = useState<LogEntry[]>([])
   const [progress, setProgress] = useState(0)
   const [terminalStatus, setTerminalStatus] = useState<string>('')
   const [historyTasks, setHistoryTasks] = useState<HistoryTask[]>([])
   const [publishing, setPublishing] = useState(false)
+  const [hoveredImg, setHoveredImg] = useState<string | null>(null)
+  const [hoverPos, setHoverPos] = useState({ x: 0, y: 0 })
   const abortRef = useRef<AbortController | null>(null)
 
   // 加载产品列表
@@ -107,10 +115,10 @@ export default function PublishCenter() {
     setPublishing(true)
 
     // 加载历史日志
-    const logs: string[] = []
+    const logs: LogEntry[] = []
     if (task.logLines && Array.isArray(task.logLines)) {
       for (const l of task.logLines) {
-        logs.push(`${l.nodeId || ''} ${l.message || ''}`)
+        logs.push({ nodeId: l.nodeId || '', message: l.message || '', status: 'done' })
       }
     }
     setTerminalLogs(logs)
@@ -140,13 +148,16 @@ export default function PublishCenter() {
             try {
               const parsed = JSON.parse(line.slice(6))
               if (parsed.nodeId && parsed.message) {
-                setTerminalLogs(prev => [...prev, `${parsed.nodeId} ${parsed.message}`])
+                setTerminalLogs(prev => {
+                  const updated = prev.map(l => ({ ...l, status: 'done' as const }))
+                  return [...updated, { nodeId: parsed.nodeId, message: parsed.message, status: 'active' }]
+                })
               }
               if (typeof parsed.progress === 'number') setProgress(parsed.progress)
               if (parsed.status) {
                 setTerminalStatus(parsed.status.toUpperCase())
                 if (parsed.status === 'failed' && parsed.error) {
-                  setTerminalLogs(prev => [...prev, `[ERROR] ${parsed.error}`])
+                  setTerminalLogs(prev => [...prev, { nodeId: 'ERROR', message: parsed.error, status: 'done' }])
                 }
                 if (parsed.status === 'success') setProgress(100)
               }
@@ -194,19 +205,19 @@ export default function PublishCenter() {
       const createData = await createRes.json()
 
       if (!createData.success) {
-        setTerminalLogs([`[ERROR] 创建任务失败: ${createData.message}`])
+        setTerminalLogs([{ nodeId: 'ERROR', message: `创建任务失败: ${createData.message}`, status: 'done' }])
         setTerminalStatus('FAILED')
         setPublishing(false)
         return
       }
 
       const task = createData.data
-      setTerminalLogs([`[SYSTEM] 任务 ${task.id.slice(0, 8)}... 已创建, 平台: ${task.platform}`])
+      setTerminalLogs([{ nodeId: 'SYSTEM', message: `任务 ${task.id.slice(0, 8)}... 已创建, 平台: ${task.platform}`, status: 'done' }])
 
       // 如果 Agent 未运行
       if (task.status === 'failed') {
         const errMsg = task.error || '本地发布Agent未运行'
-        setTerminalLogs(prev => [...prev, `[ERROR] ${errMsg}，请启动分拣系统`])
+        setTerminalLogs(prev => [...prev, { nodeId: 'ERROR', message: `${errMsg}，请启动分拣系统`, status: 'done' }])
         setTerminalStatus('FAILED')
         setPublishing(false)
         loadHistory()
@@ -214,7 +225,7 @@ export default function PublishCenter() {
       }
 
       // 2. 连接 SSE
-      setTerminalLogs(prev => [...prev, '[SYSTEM] 正在连接 Agent...'])
+      setTerminalLogs(prev => [...prev, { nodeId: 'SYSTEM', message: '正在连接 Agent...', status: 'active' }])
       const sseRes = await fetch(`${API_BASE}/publish/tasks/${task.id}/stream`, {
         signal: abort.signal,
       })
@@ -249,8 +260,10 @@ export default function PublishCenter() {
               const parsed = JSON.parse(data) as SSELog & { progress?: number; status?: string; error?: string }
 
               if (parsed.nodeId && parsed.message) {
-                // 日志行
-                setTerminalLogs(prev => [...prev, `${parsed.nodeId} ${parsed.message}`])
+                setTerminalLogs(prev => {
+                  const updated = prev.map(l => ({ ...l, status: 'done' as const }))
+                  return [...updated, { nodeId: parsed.nodeId, message: parsed.message, status: 'active' }]
+                })
               }
               if (typeof parsed.progress === 'number') {
                 setProgress(parsed.progress)
@@ -258,7 +271,7 @@ export default function PublishCenter() {
               if (parsed.status) {
                 setTerminalStatus(parsed.status.toUpperCase())
                 if (parsed.status === 'failed' && parsed.error) {
-                  setTerminalLogs(prev => [...prev, `[ERROR] ${parsed.error}`])
+                  setTerminalLogs(prev => [...prev, { nodeId: 'ERROR', message: parsed.error!, status: 'done' }])
                 }
                 if (parsed.status === 'success') {
                   setProgress(100)
@@ -270,7 +283,7 @@ export default function PublishCenter() {
       }
     } catch (err: any) {
       if (err?.name !== 'AbortError') {
-        setTerminalLogs(prev => [...prev, `[ERROR] 连接中断: ${err.message}`])
+        setTerminalLogs(prev => [...prev, { nodeId: 'ERROR', message: `连接中断: ${err.message}`, status: 'done' }])
         setTerminalStatus('FAILED')
       }
     } finally {
@@ -292,15 +305,16 @@ export default function PublishCenter() {
 
   return (
     <PageContainer>
-      <h1 className="text-[28px] font-semibold tracking-tight text-gray-900 mb-1">发布中心</h1>
-      <p className="text-[13px] mb-6" style={{ color: 'var(--text-tertiary)' }}>选品 → 触发发布 → 查看任务状态</p>
+      <div className="flex flex-col" style={{ height: 'calc(100vh - 56px)' }}>
+      <h1 className="text-[28px] font-semibold tracking-tight text-gray-900 mb-1 shrink-0">发布中心</h1>
+      <p className="text-[13px] mb-6 shrink-0" style={{ color: 'var(--text-tertiary)' }}>选品 → 触发发布 → 查看任务状态</p>
 
-      <div className="flex gap-6" style={{ alignItems: 'stretch' }}>
+      <div className="flex gap-6 min-h-0 flex-1" style={{ alignItems: 'stretch' }}>
         {/* LEFT COLUMN */}
         <div className="flex-1 min-w-0 flex flex-col">
           <div>
             <span className="text-[13px] tracking-wide block mb-2" style={{ color: 'var(--text-tertiary)', letterSpacing: '0.3px' }}>选择平台</span>
-            <div className="flex gap-3">
+            <div className="flex gap-3 items-end">
               {platforms.map(p => (
                 <button key={p.name} onClick={() => p.active && setSelectedPlatform(p.name)}
                   className={`rounded-lg px-5 py-3 text-left transition-all duration-200 ${p.active ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}
@@ -309,12 +323,22 @@ export default function PublishCenter() {
                   <p className="text-[13px] mt-0.5" style={{ color: 'var(--text-tertiary)' }}>{p.active ? `端口: ${p.port}` : '未配置'}</p>
                 </button>
               ))}
+              <div className="flex-1" />
+              <button onClick={() => setShowConfirm(true)} disabled={selectedIds.size === 0 || publishing}
+                className="flex items-center gap-1.5 h-9 px-5 rounded-md text-[13px] font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                style={{ backgroundColor: 'var(--accent)', color: 'var(--text-inverse)' }}>
+                <Play className="w-3.5 h-3.5" />
+                {publishing ? '发布中...' : '开始发布'}
+              </button>
             </div>
           </div>
 
           <div className="flex-1 flex flex-col mt-6">
-            <span className="text-[13px] tracking-wide block mb-2" style={{ color: 'var(--text-tertiary)', letterSpacing: '0.3px' }}>选择产品</span>
-            <div className="flex-1 rounded-lg overflow-hidden" style={{ border: '1px solid var(--border-default)' }}>
+            <div className="flex items-center justify-between mb-2 shrink-0">
+              <span className="text-[13px] tracking-wide" style={{ color: 'var(--text-tertiary)', letterSpacing: '0.3px' }}>选择产品</span>
+              <span className="text-[12px]" style={{ color: 'var(--text-tertiary)' }}>已选 {selectedIds.size} 个产品</span>
+            </div>
+            <div className="flex-1 rounded-lg overflow-hidden min-h-0" style={{ border: '1px solid var(--border-default)' }}>
               <div className="h-full overflow-y-auto">
                 {productsLoading ? (
                   <div className="flex items-center justify-center py-8">
@@ -341,7 +365,16 @@ export default function PublishCenter() {
                       onMouseLeave={e => { if (!selectedIds.has(p.id)) (e.currentTarget as HTMLElement).style.backgroundColor = '' }}>
                       <input type="checkbox" checked={selectedIds.has(p.id)} onChange={() => {}} className="w-4 h-4 rounded" style={{ accentColor: 'var(--accent)' }} />
                       {p.mainImage ? (
-                        <img src={p.mainImage} alt="" className="w-9 h-9 rounded object-cover" />
+                        <div className="relative shrink-0">
+                          <img src={p.mainImage} alt="" className="w-9 h-9 rounded object-cover cursor-pointer"
+                            onMouseEnter={e => {
+                              const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                              setHoverPos({ x: rect.left, y: rect.bottom + 8 })
+                              setHoveredImg(p.mainImage)
+                            }}
+                            onMouseLeave={() => setHoveredImg(null)}
+                          />
+                        </div>
                       ) : (
                         <div className="w-9 h-9 rounded flex items-center justify-center" style={{ backgroundColor: 'var(--bg-surface)' }}>
                           <span className="text-[7px]" style={{ color: 'var(--text-tertiary)' }}>无图</span>
@@ -356,15 +389,7 @@ export default function PublishCenter() {
                 )}
               </div>
             </div>
-            <div className="flex items-center justify-between pt-3 mt-auto">
-              <span className="text-[12px]" style={{ color: 'var(--text-tertiary)' }}>已选 {selectedIds.size} 个产品</span>
-              <button onClick={() => setShowConfirm(true)} disabled={selectedIds.size === 0 || publishing}
-                className="flex items-center gap-1.5 h-9 px-5 rounded-md text-[13px] font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                style={{ backgroundColor: 'var(--accent)', color: 'var(--text-inverse)' }}>
-                <Play className="w-3.5 h-3.5" />
-                {publishing ? '发布中...' : '开始发布'}
-              </button>
-            </div>
+            <div className="pt-3 mt-auto pb-4" />
           </div>
         </div>
 
@@ -377,8 +402,8 @@ export default function PublishCenter() {
             status={terminalStatus}
           />
 
-          <div>
-            <div className="flex items-center justify-between mb-2">
+          <div className="flex-1 min-h-0 flex flex-col justify-end">
+            <div className="flex items-center justify-between mb-2 shrink-0">
               <span className="text-[12px] font-medium" style={{ color: 'var(--text-tertiary)' }}>最近任务</span>
               <button onClick={loadHistory} className="text-[12px]" style={{ color: 'var(--accent)' }}>刷新</button>
             </div>
@@ -389,11 +414,11 @@ export default function PublishCenter() {
               {historyTasks.length === 0 ? (
                 <div className="py-8 text-center text-[13px]" style={{ color: 'var(--text-tertiary)' }}>暂无发布记录</div>
               ) : (
-                historyTasks.map((t, i) => {
+                historyTasks.slice(0, 5).map((t, i) => {
                   const s = statusBadge[t.status] || statusBadge.pending
                   return (
-                    <div key={t.id} className="flex items-center justify-between px-3 py-2.5 transition-colors"
-                      style={{ borderBottom: i < historyTasks.length - 1 ? '1px solid var(--border-default)' : 'none' }}
+                    <div key={t.id} className="flex items-center justify-between px-3 py-1.5 transition-colors"
+                      style={{ borderBottom: i < Math.min(historyTasks.length, 5) - 1 ? '1px solid var(--border-default)' : 'none' }}
                       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--bg-subtle)' }}
                       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.backgroundColor = '' }}>
                       <div className="flex-1 min-w-0 mr-2">
@@ -412,6 +437,7 @@ export default function PublishCenter() {
           </div>
         </div>
       </div>
+      </div>
 
       {/* Confirm Modal */}
       {showConfirm && (
@@ -429,95 +455,261 @@ export default function PublishCenter() {
           </div>
         </div>
       )}
+      {hoveredImg && (
+        <div className="fixed z-[100] pointer-events-none" style={{ left: hoverPos.x, top: hoverPos.y }}>
+          <img src={hoveredImg} alt="" className="w-[400px] h-[400px] rounded-lg object-cover shadow-xl border"
+            style={{ borderColor: 'var(--border-default)', backgroundColor: 'var(--bg-elevated)' }} />
+        </div>
+      )}
     </PageContainer>
   )
 }
 
 /* ================================================================
-   PublishTerminal — dual-theme, grid pattern, SSE log stream
+   PublishTerminal — fixed-height card, CSS mask, status icons, 3D progress bar
    ================================================================ */
 
 function PublishTerminal({ active, logs, progress, status }: {
-  active: boolean; logs: string[]; progress: number; status: string
+  active: boolean; logs: LogEntry[]; progress: number; status: string
 }) {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
   const scrollRef = useRef<HTMLDivElement>(null)
 
+  // 自动追底：每次新日志到来，锁定 scrollHeight
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
   }, [logs])
 
-  const t = {
-    bg: isDark ? '#030303' : '#f4f7fb',
-    border: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.08)',
-    headerText: '#06b6d4',
-    logColor: isDark ? 'rgba(255,255,255,0.45)' : 'rgba(15,23,42,0.55)',
-    prefixColor: '#06b6d4',
-    errorColor: '#F87171',
-    numberGradientStart: isDark ? '#ffffff' : '#0f172a',
-    numberGradientEnd: isDark ? '#444' : '#64748b',
-    bgRadial: isDark
-      ? 'radial-gradient(circle at top left, rgba(139,92,246,0.08), transparent 30%)'
-      : 'radial-gradient(circle at top left, rgba(37,99,235,0.08), transparent 35%), radial-gradient(circle at bottom right, rgba(139,92,246,0.08), transparent 35%)',
-    gridColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(15,23,42,0.05)',
-  }
+  // ── 主题 tokens ────────────────────────────────────────────────────────
+  const bg = isDark ? '#0a0a0a' : '#ffffff'
+  const border = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.06)'
+  const logDone = isDark ? 'rgba(255,255,255,0.4)' : 'rgba(15,23,42,0.45)'
+  const logActive = isDark ? '#e2e8f0' : '#1e293b'
+  const activeBg = isDark ? 'rgba(79,70,229,0.1)' : 'rgba(79,70,229,0.06)'
+  const activeBorder = isDark ? 'rgba(79,70,229,0.25)' : 'rgba(79,70,229,0.2)'
+  const prefixColor = '#4f46e5'
+  const errorColor = '#F87171'
+  const headerText = isDark ? 'rgba(255,255,255,0.5)' : 'rgba(15,23,42,0.5)'
 
   return (
-    <div className="flex-1 rounded-lg overflow-hidden flex flex-col relative"
-      style={{ backgroundColor: t.bg, border: `1px solid ${t.border}`, minHeight: 300 }}>
-      <div className="absolute inset-0 pointer-events-none" style={{ background: t.bgRadial }} />
-      <div className="absolute inset-0 pointer-events-none opacity-60" style={{
-        backgroundImage: `linear-gradient(${t.gridColor} 1px, transparent 1px), linear-gradient(90deg, ${t.gridColor} 1px, transparent 1px)`,
-        backgroundSize: '40px 40px',
-        maskImage: 'radial-gradient(ellipse at center, black 20%, transparent 70%)',
-        WebkitMaskImage: 'radial-gradient(ellipse at center, black 20%, transparent 70%)',
-      }} />
+    <div className="relative h-[550px] rounded-2xl overflow-hidden">
+      {/* ── 3D 玻璃边框 (浅色) / 暗色边框 ─────────────────────────────────── */}
+      {!isDark && (
+        <>
+          <div className="absolute inset-0 bg-gradient-to-br from-white/80 via-white/40 to-white/10 rounded-2xl z-0" />
+          <div className="absolute inset-0 shadow-[inset_0_1px_1px_rgba(255,255,255,1)] rounded-2xl z-0" />
+        </>
+      )}
+      {isDark && (
+        <div className="absolute inset-0 rounded-2xl z-0" style={{ border: `1px solid ${border}` }} />
+      )}
 
-      <div className="relative z-10 flex flex-col flex-1">
-        <div className="flex items-center justify-between shrink-0 px-4 h-9" style={{ borderBottom: `1px solid ${t.border}` }}>
-          <span className="text-[12px] font-mono font-medium tracking-wider" style={{ color: t.headerText }}>PUBLISH TERMINAL</span>
+      {/* ── 内容主体 ─────────────────────────────────────────────────────── */}
+      <div className="relative flex flex-col h-full rounded-2xl overflow-hidden z-10"
+        style={{
+          backgroundColor: isDark ? bg : 'rgba(255,255,255,0.9)',
+          backdropFilter: isDark ? 'none' : 'blur(24px)',
+          border: isDark ? `1px solid ${border}` : '1px solid rgba(15,23,42,0.06)',
+        }}>
+
+        {/* ── 背景氛围光 ──────────────────────────────────────────────────── */}
+        <div className="absolute -bottom-20 -right-20 w-64 h-64 rounded-full blur-3xl z-0 pointer-events-none"
+          style={{ backgroundColor: isDark ? 'rgba(6,182,212,0.04)' : 'rgba(6,182,212,0.06)' }} />
+        <div className="absolute top-0 right-0 w-48 h-48 rounded-full blur-2xl z-0 pointer-events-none"
+          style={{ backgroundColor: isDark ? 'rgba(139,92,246,0.03)' : 'rgba(139,92,246,0.04)' }} />
+
+        {/* ── 头部 ────────────────────────────────────────────────────────── */}
+        <div className="flex items-center justify-between shrink-0 px-5 py-4 border-b z-10"
+          style={{ borderColor: border }}>
+          <span className="text-[11.5px] font-semibold tracking-[0.12em] uppercase"
+            style={{ color: headerText }}>任务进度</span>
           {active && (
-            <span className="text-[12px] font-mono" style={{ color: status === 'FAILED' ? t.errorColor : t.headerText }}>
-              {status || (progress >= 100 ? 'COMPLETE' : 'RUNNING')}
-            </span>
+            <div className="flex items-center gap-1.5 text-[11px] font-bold tracking-wider"
+              style={{ color: status === 'FAILED' ? errorColor : '#10b981' }}>
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
+                  style={{ backgroundColor: status === 'FAILED' ? errorColor : '#34d399' }} />
+                <span className="relative inline-flex rounded-full h-2 w-2"
+                  style={{ backgroundColor: status === 'FAILED' ? errorColor : '#10b981' }} />
+              </span>
+              {status === 'FAILED' ? 'FAILED' : status === 'COMPLETE' ? 'SUCCESS' : 'RUNNING'}
+            </div>
           )}
         </div>
 
-        <div ref={scrollRef}
-          className="flex-1 overflow-y-auto px-4 py-3 font-mono text-[12px] leading-relaxed"
-          style={{ scrollbarWidth: 'thin', scrollbarColor: `${t.border} transparent` }}>
-          {active && logs.length === 0 ? (
-            <div style={{ color: t.logColor }}>等待 Agent 连接...</div>
-          ) : logs.map((log, i) => {
-            const isError = log.startsWith('[ERROR]')
-            const parts = log.match(/^(\[0x[0-9A-F]+\]|\[SYSTEM\]|\[ERROR\])\s?(.*)$/)
-            return (
-              <div key={i} style={{ color: isError ? t.errorColor : t.logColor, animation: `fadeUp 0.35s ease-out both` }}>
-                {parts ? (
-                  <><span style={{ color: isError ? t.errorColor : parts[1] === '[SYSTEM]' ? '#94A3B8' : t.prefixColor }}>{parts[1]}</span> {parts[2]}</>
-                ) : log}
-              </div>
-            )
-          })}
-          {active && progress < 100 && status !== 'FAILED' && (
-            <span className="inline-block w-1.5 h-3 ml-0.5 align-middle" style={{ backgroundColor: t.headerText }} />
-          )}
+        {/* ── 日志区：定高锁死 + CSS Mask 渐隐 + 内部滚动 ──────────────────── */}
+        <div className="flex-1 min-h-0 relative z-10"
+          style={{
+            WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 12%, black 100%)',
+            maskImage: 'linear-gradient(to bottom, transparent 0%, black 12%, black 100%)',
+          }}>
+          <div
+            ref={scrollRef}
+            className="absolute inset-0 overflow-y-auto font-mono text-xs px-5 py-2"
+            style={{ scrollbarWidth: 'thin', scrollbarColor: `${border} transparent` }}>
+            <div className="space-y-3 pb-2">
+              {!active && logs.length === 0 ? (
+                <div style={{ color: logDone }}>暂无发布日志</div>
+              ) : active && logs.length === 0 ? (
+                <div style={{ color: logDone }}>等待 Agent 连接...</div>
+              ) : (
+                logs.map((log, i) => {
+                  const isActive = log.status === 'active'
+                  const isError = log.nodeId === 'ERROR'
+                  const isSystem = log.nodeId === 'SYSTEM'
+
+                  return (
+                    <div key={i}
+                      className="flex items-start gap-3 transition-all duration-300"
+                      style={{ opacity: isActive ? 1 : 0.5 }}>
+                      {isActive ? (
+                        <>
+                          {/* ── 活动行：前缀+消息共用背景框 ────────────────── */}
+                          <div className="flex-1 flex items-start gap-2.5 rounded-md px-2.5 py-1.5 shadow-sm"
+                            style={{
+                              backgroundColor: activeBg,
+                              border: `1px solid ${activeBorder}`,
+                            }}>
+                            <span className="shrink-0 text-[11px] font-semibold"
+                              style={{ color: prefixColor }}>
+                              [{log.nodeId}]
+                            </span>
+                            <span className="flex-1 leading-relaxed font-medium text-[11px]"
+                              style={{ color: logActive }}>
+                              {log.message}
+                            </span>
+                          </div>
+                          {/* ── 状态图标 ────────────────────────────────────── */}
+                          <div className="shrink-0 w-4 flex items-start pt-1.5">
+                            {progress >= 100 ? (
+                              <CheckCircle2 size={13} className="text-emerald-500/70" strokeWidth={2.5} />
+                            ) : (
+                              <Loader2 size={13} className="animate-spin" strokeWidth={3} style={{ color: prefixColor }} />
+                            )}
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          {/* ── 非活动行：普通布局 ──────────────────────────── */}
+                          <div className="w-[68px] shrink-0 font-medium text-right">
+                            <span className="text-[11px] font-normal"
+                              style={{ color: isError ? errorColor : isSystem ? '#94A3B8' : 'rgba(148,163,184,0.55)' }}>
+                              [{log.nodeId}]
+                            </span>
+                          </div>
+                          <div className="flex-1 leading-relaxed"
+                            style={{ color: isError ? errorColor : logDone }}>
+                            {log.message}
+                          </div>
+                          <div className="shrink-0 w-4 flex items-start pt-0.5">
+                            {log.status === 'done' && (
+                              <CheckCircle2 size={13} className="text-emerald-500/70" strokeWidth={2.5} />
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )
+                })
+              )}
+              {/* 闪烁光标 */}
+              {active && progress < 100 && status !== 'FAILED' && (
+                <span className="inline-block w-1.5 h-3 align-middle ml-[82px]"
+                  style={{ backgroundColor: prefixColor }} />
+              )}
+            </div>
+          </div>
         </div>
 
+        {/* ── 3D 进度条底部 ───────────────────────────────────────────────── */}
         {active && (
-          <div className="shrink-0 px-4 pb-4 text-right">
-            <span className="select-none leading-none font-light" style={{
-              fontSize: 48, letterSpacing: -2,
-              color: status === 'FAILED' ? t.errorColor : t.headerText,
-            }}>
-              {progress}%
-            </span>
+          <div className="shrink-0 px-5 pt-1 pb-4 z-10">
+            <div className="flex justify-end items-baseline mb-1">
+              <span className="text-6xl font-light tracking-tighter tabular-nums leading-none"
+                style={{
+                  background: isDark
+                    ? 'linear-gradient(to bottom right, #e2e8f0, #94a3b8)'
+                    : 'linear-gradient(to bottom right, #06b6d4, #3b82f6)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  filter: 'drop-shadow(0 1px 2px rgba(6,182,212,0.2))',
+                }}>
+                {progress}
+              </span>
+              <span className="text-3xl font-light mb-1.5 ml-1"
+                style={{ color: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(6,182,212,0.3)' }}>%</span>
+            </div>
+
+            {/* 3D 进度条轨道 */}
+            <div className="h-2.5 w-full rounded-full overflow-hidden relative p-[1px]"
+              style={{
+                backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'var(--bg-surface)',
+                boxShadow: isDark ? 'inset 0 1px 3px rgba(0,0,0,0.3)' : 'inset 0 1px 3px rgba(0,0,0,0.06)',
+                border: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(15,23,42,0.06)',
+              }}>
+              <div className="h-full rounded-full overflow-hidden relative transition-all duration-500 ease-out"
+                style={{
+                  width: `${progress}%`,
+                  background: status === 'FAILED'
+                    ? 'linear-gradient(to right, #F87171, #EF4444)'
+                    : 'linear-gradient(to right, #06b6d4, #3b82f6)',
+                  boxShadow: status === 'FAILED'
+                    ? '0 1px 2px rgba(248,113,113,0.3)'
+                    : '0 1px 2px rgba(6,182,212,0.3)',
+                }}>
+                {/* 光泽高光 */}
+                <div className="absolute top-0 left-0 right-0 h-1/2 bg-gradient-to-b from-white/30 to-transparent rounded-t-full" />
+                {/* 斜纹动画 */}
+                <div className="absolute inset-0 opacity-20 stripe-animated" />
+              </div>
+            </div>
+
+            <div className="flex justify-between items-center mt-2.5 px-0.5 text-[10px] font-medium uppercase tracking-wider"
+              style={{ color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(15,23,42,0.35)' }}>
+              <span className="flex items-center gap-1">
+                <Sparkles size={10} style={{ color: prefixColor }} />
+                {status === 'FAILED' ? 'Publish Failed' : 'Publishing'}
+              </span>
+              <span>{progress >= 100 ? 'Complete' : 'Processing...'}</span>
+            </div>
+          </div>
+        )}
+
+        {/* ── 非活跃态底部占位 ────────────────────────────────────────────── */}
+        {!active && (
+          <div className="shrink-0 px-5 pb-4 z-10">
+            <div className="flex justify-end">
+              <span className="text-6xl font-light tracking-tighter leading-none"
+                style={{ color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.06)' }}>--</span>
+            </div>
           </div>
         )}
       </div>
+
+      {/* ── 全局样式：斜纹动画 + 滚动条 ───────────────────────────────────── */}
+      <style>{`
+        .stripe-animated {
+          background-image: linear-gradient(
+            45deg,
+            rgba(255,255,255,0.15) 25%,
+            transparent 25%,
+            transparent 50%,
+            rgba(255,255,255,0.15) 50%,
+            rgba(255,255,255,0.15) 75%,
+            transparent 75%,
+            transparent
+          );
+          background-size: 1rem 1rem;
+          animation: stripe-slide 1s linear infinite;
+        }
+        @keyframes stripe-slide {
+          from { background-position: 1rem 0; }
+          to { background-position: 0 0; }
+        }
+      `}</style>
     </div>
   )
 }

@@ -276,7 +276,7 @@ export class DistributionsService {
     }
   }
 
-  async create(dto: CreateDistributionDTO): Promise<{ id: string; publicUrl: string | null }> {
+  async create(dto: CreateDistributionDTO): Promise<{ id: string; publicUrl: string | null; deployId: string | null }> {
     const [customer] = await db.select({ id: customers.id }).from(customers).where(eq(customers.id, dto.customerId)).limit(1)
     if (!customer) throw new BusinessError(ErrorCode.NOT_FOUND, '客户不存在')
 
@@ -330,21 +330,25 @@ export class DistributionsService {
       }
     }
 
-    // 异步触发 Cloudflare Pages 部署
-    triggerDeploy().catch(err =>
+    // 触发 Cloudflare Pages 部署
+    let deployId: string | null = null
+    try {
+      const result = await triggerDeploy()
+      deployId = result.deployId
+    } catch (err) {
       console.error('触发 Cloudflare 部署失败:', err instanceof Error ? err.message : String(err))
-    )
+    }
 
-    return { id: row?.id ?? '', publicUrl }
+    return { id: row?.id ?? '', publicUrl, deployId }
   }
 
-  async update(id: string, dto: UpdateDistributionDTO): Promise<DistributionRow | null> {
+  async update(id: string, dto: UpdateDistributionDTO): Promise<{ row: DistributionRow | null; deployId: string | null }> {
     const [existing] = await db
       .select({ id: distributions.id })
       .from(distributions)
       .where(eq(distributions.id, id))
       .limit(1)
-    if (!existing) return null
+    if (!existing) return { row: null, deployId: null }
 
     const updateData: Record<string, unknown> = { updatedAt: new Date() }
     if (dto.agreement !== undefined) updateData.agreement = dto.agreement?.trim() || null
@@ -366,29 +370,42 @@ export class DistributionsService {
       .where(eq(distributions.id, id))
       .returning()
 
-    // 触发 Cloudflare Pages 部署
-    triggerDeploy().catch(err =>
+    // 修改分销信息后自动触发 Cloudflare Pages 部署
+    let deployId: string | null = null
+    try {
+      const result = await triggerDeploy()
+      deployId = result.deployId
+    } catch (err) {
       console.error('触发 Cloudflare 部署失败:', err instanceof Error ? err.message : String(err))
-    )
+    }
 
-    return row ?? null
+    return { row: row ?? null, deployId }
   }
 
-  async softDelete(id: string): Promise<boolean> {
+  async softDelete(id: string): Promise<{ ok: boolean; deployId: string | null }> {
     const [existing] = await db
       .select({ id: distributions.id })
       .from(distributions)
       .where(eq(distributions.id, id))
       .limit(1)
-    if (!existing) return false
+    if (!existing) return { ok: false, deployId: null }
     await db
       .update(distributions)
       .set({ status: 'inactive', updatedAt: new Date() })
       .where(eq(distributions.id, id))
-    return true
+
+    let deployId: string | null = null
+    try {
+      const result = await triggerDeploy()
+      deployId = result.deployId
+    } catch (err) {
+      console.error('触发 Cloudflare 部署失败:', err instanceof Error ? err.message : String(err))
+    }
+
+    return { ok: true, deployId }
   }
 
-  async publish(id: string): Promise<{ publicUrl: string | null } | null> {
+  async publish(id: string): Promise<{ publicUrl: string | null; deployId: string | null } | null> {
     const [row] = await db
       .select({
         id: distributions.id,
@@ -408,14 +425,18 @@ export class DistributionsService {
       .where(eq(distributions.id, id))
 
     // 触发 Cloudflare Pages 部署
-    triggerDeploy().catch(err =>
+    let deployId: string | null = null
+    try {
+      const result = await triggerDeploy()
+      deployId = result.deployId
+    } catch (err) {
       console.error('触发 Cloudflare 部署失败:', err instanceof Error ? err.message : String(err))
-    )
+    }
 
-    return { publicUrl }
+    return { publicUrl, deployId }
   }
 
-  async upsertPrices(distributionId: string, items: UpsertPriceDTO[]): Promise<number> {
+  async upsertPrices(distributionId: string, items: UpsertPriceDTO[]): Promise<{ count: number; deployId: string | null }> {
     const [dist] = await db
       .select({ id: distributions.id })
       .from(distributions)
@@ -456,12 +477,16 @@ export class DistributionsService {
       count++
     }
 
-    // 触发 Cloudflare Pages 部署
-    triggerDeploy().catch(err =>
+    // 价格变更后自动触发 Cloudflare Pages 部署
+    let deployId: string | null = null
+    try {
+      const result = await triggerDeploy()
+      deployId = result.deployId
+    } catch (err) {
       console.error('触发 Cloudflare 部署失败:', err instanceof Error ? err.message : String(err))
-    )
+    }
 
-    return count
+    return { count, deployId }
   }
 }
 

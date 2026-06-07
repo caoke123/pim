@@ -223,15 +223,15 @@ export class CatalogsService {
     return catalog
   }
 
-  /** 更新图册 (部分字段) */
-  async update(id: string, dto: UpdateCatalogDTO): Promise<CatalogRow | null> {
+  /** 更新图册 (部分字段, 变更后自动触发部署) */
+  async update(id: string, dto: UpdateCatalogDTO): Promise<{ row: CatalogRow | null; deployId: string | null }> {
     const [existing] = await db
       .select()
       .from(catalogs)
       .where(eq(catalogs.id, id))
       .limit(1)
 
-    if (!existing) return null
+    if (!existing) return { row: null, deployId: null }
 
     const updateData: Record<string, unknown> = {
       updatedAt: new Date(),
@@ -276,7 +276,16 @@ export class CatalogsService {
       .where(eq(catalogs.id, id))
       .returning()
 
-    return updated ?? null
+    // 修改图册信息后自动触发 Cloudflare Pages 部署
+    let deployId: string | null = null
+    try {
+      const result = await triggerDeploy()
+      deployId = result.deployId
+    } catch (err) {
+      console.error('触发 Cloudflare 部署失败:', err instanceof Error ? err.message : String(err))
+    }
+
+    return { row: updated ?? null, deployId }
   }
 
   /** 图册统计 */
@@ -329,15 +338,15 @@ export class CatalogsService {
     }
   }
 
-  /** 软删除图册 */
-  async softDelete(id: string): Promise<CatalogRow | null> {
+  /** 软删除图册 (删除后自动触发部署使链接失效) */
+  async softDelete(id: string): Promise<{ row: CatalogRow | null; deployId: string | null }> {
     const [existing] = await db
       .select()
       .from(catalogs)
       .where(eq(catalogs.id, id))
       .limit(1)
 
-    if (!existing) return null
+    if (!existing) return { row: null, deployId: null }
 
     const [updated] = await db
       .update(catalogs)
@@ -349,7 +358,15 @@ export class CatalogsService {
       .where(eq(catalogs.id, id))
       .returning()
 
-    return updated ?? null
+    let deployId: string | null = null
+    try {
+      const result = await triggerDeploy()
+      deployId = result.deployId
+    } catch (err) {
+      console.error('触发 Cloudflare 部署失败:', err instanceof Error ? err.message : String(err))
+    }
+
+    return { row: updated ?? null, deployId }
   }
 
   /** 发布图册 (更新状态为 published, 触发 Cloudflare Pages 部署) */
@@ -449,8 +466,8 @@ export class CatalogsService {
     return { viewCount: updated?.viewCount ?? 0 }
   }
 
-  /** 上传图册封面 (dataURL -> R2) */
-  async uploadCover(id: string, dataUrl: string): Promise<{ coverImageUrl: string } | null> {
+  /** 上传图册封面 (dataURL -> R2, 自动触发部署) */
+  async uploadCover(id: string, dataUrl: string): Promise<{ coverImageUrl: string; deployId: string | null } | null> {
     const match = dataUrl.match(/^data:(image\/(?:jpeg|png|webp));base64,(.+)$/i)
     if (!match) {
       throw new BusinessError(ErrorCode.VALIDATION, '仅支持 jpg / png / webp 格式')
@@ -510,7 +527,16 @@ export class CatalogsService {
       })
       .where(eq(catalogs.id, id))
 
-    return { coverImageUrl }
+    // 封面上传后自动触发 Cloudflare Pages 部署
+    let deployId: string | null = null
+    try {
+      const result = await triggerDeploy()
+      deployId = result.deployId
+    } catch (err) {
+      console.error('触发 Cloudflare 部署失败:', err instanceof Error ? err.message : String(err))
+    }
+
+    return { coverImageUrl, deployId }
   }
 }
 

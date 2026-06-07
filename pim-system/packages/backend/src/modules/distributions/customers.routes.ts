@@ -54,9 +54,9 @@ customersRoutes.patch('/:id', async (c) => {
   if (!parsed.success) {
     throw new BusinessError(ErrorCode.VALIDATION, parsed.error.issues[0]?.message ?? '参数错误')
   }
-  const row = await customersService.update(id, parsed.data)
+  const { row, deployId } = await customersService.update(id, parsed.data)
   if (!row) throw new NotFoundError(ErrorCode.NOT_FOUND, '客户不存在')
-  return c.json({ code: 0, message: 'ok', data: row })
+  return c.json({ code: 0, message: 'ok', data: { ...row, deployId } })
 })
 
 customersRoutes.delete('/:id', async (c) => {

@@ -29,11 +29,12 @@ const TABS = [
 
 type TabKey = (typeof TABS)[number]['key']
 
-export default function DistributionDrawer({ distributionId, defaultTab, deploying, onClose }: {
+export default function DistributionDrawer({ distributionId, defaultTab, deploying, onClose, onDeployTriggered }: {
   distributionId: string
   defaultTab?: TabKey
   deploying?: boolean
   onClose: () => void
+  onDeployTriggered?: (deployId: string) => void
 }) {
   const [detail, setDetail] = useState<DistributionDetail | null>(null)
   const [tab, setTab] = useState<TabKey>(defaultTab ?? 'catalog')
@@ -124,17 +125,18 @@ export default function DistributionDrawer({ distributionId, defaultTab, deployi
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          {tab === 'products' && <ProductsTab detail={detail} onUpdate={load} />}
-          {tab === 'customer' && <CustomerTab detail={detail} />}
-          {tab === 'catalog' && <CatalogTab detail={detail} onUpdate={load} />}
+          {tab === 'products' && <ProductsTab detail={detail} onUpdate={load} onDeployTriggered={onDeployTriggered} />}
+          {tab === 'customer' && <CustomerTab detail={detail} onDeployTriggered={onDeployTriggered} />}
+          {tab === 'catalog' && <CatalogTab detail={detail} onUpdate={load} onDeployTriggered={onDeployTriggered} />}
           {tab === 'agreement' && (
             <AgreementTab
               initial={detail.agreement ?? ''}
               onSave={async html => {
                 setSavingAgreement(true)
                 try {
-                  await api.updateDistribution(detail.id, { agreement: html })
+                  const res = await api.updateDistribution(detail.id, { agreement: html })
                   toast.success('已保存')
+                  if (res.data?.deployId) onDeployTriggered?.(res.data.deployId)
                   await load()
                 } catch (e) {
                   toast.error('保存失败')
@@ -248,7 +250,7 @@ function groupByProduct(skus: DistributionSkuItem[]): ProductGroup[] {
   return Array.from(map.values())
 }
 
-function ProductsTab({ detail, onUpdate }: { detail: DistributionDetail; onUpdate: () => void }) {
+function ProductsTab({ detail, onUpdate, onDeployTriggered }: { detail: DistributionDetail; onUpdate: () => void; onDeployTriggered?: (deployId: string) => void }) {
   const [skus, setSkus] = useState<DistributionSkuItem[]>(detail.skus)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [dirtySkuIds, setDirtySkuIds] = useState<Set<string>>(new Set())
@@ -299,9 +301,10 @@ function ProductsTab({ detail, onUpdate }: { detail: DistributionDetail; onUpdat
     setSaving(true)
     try {
       const items = modified.map(s => ({ skuId: s.skuId, customerPrice: s.customerPrice }))
-      await api.upsertDistributionPrices(detail.id, items)
+      const res = await api.upsertDistributionPrices(detail.id, items)
       setDirtySkuIds(new Set())
       toast.success(`已保存 ${items.length} 个 SKU`)
+      if (res.data?.deployId) onDeployTriggered?.(res.data.deployId)
       onUpdate()
     } catch {
       toast.error('保存失败')
@@ -553,7 +556,7 @@ function SkuRow({ item, dirty, onPriceChange }: { item: DistributionSkuItem; dir
 type FieldKey = 'name' | 'contactPerson' | 'phone' | 'wechat' | 'notes'
 type FieldStatus = 'idle' | 'saving' | 'success'
 
-function CustomerTab({ detail }: { detail: DistributionDetail }) {
+function CustomerTab({ detail, onDeployTriggered }: { detail: DistributionDetail; onDeployTriggered?: (deployId: string) => void }) {
   const [name, setName] = useState(detail.customerName)
   const [contactPerson, setContactPerson] = useState(detail.customerContactPerson ?? '')
   const [phone, setPhone] = useState(detail.customerPhone ?? '')
@@ -579,7 +582,8 @@ function CustomerTab({ detail }: { detail: DistributionDetail }) {
                        field === 'contactPerson' ? 'contactPerson' :
                        field === 'phone' ? 'phone' :
                        field === 'wechat' ? 'wechat' : 'notes'
-      await api.updateCustomer(detail.customerId, { [apiField]: value.trim() || undefined } as any)
+      const res = await api.updateCustomer(detail.customerId, { [apiField]: value.trim() || undefined } as any)
+      if (res.data?.deployId) onDeployTriggered?.(res.data.deployId)
       setStatus(s => ({ ...s, [field]: 'success' }))
       setTimeout(() => {
         setStatus(s => s[field] === 'success' ? { ...s, [field]: 'idle' } : s)
@@ -762,7 +766,7 @@ function Toolbar({ editor }: { editor: ReturnType<typeof useEditor> }) {
 
 const CATALOG_PAGE_SIZE = 12
 
-function CatalogTab({ detail, onUpdate }: { detail: DistributionDetail; onUpdate: () => void }) {
+function CatalogTab({ detail, onUpdate, onDeployTriggered }: { detail: DistributionDetail; onUpdate: () => void; onDeployTriggered?: (deployId: string) => void }) {
   const [catalogs, setCatalogs] = useState<CatalogListItem[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -791,12 +795,13 @@ function CatalogTab({ detail, onUpdate }: { detail: DistributionDetail; onUpdate
     setSelectedId(catalogId)
     setSaving(true)
     try {
-      await api.updateDistribution(detail.id, { catalogId: catalogId as any } as any)
+      const res = await api.updateDistribution(detail.id, { catalogId: catalogId as any } as any)
       if (catalogId && catalogName) {
         toast.success(`已绑定图册：${catalogName}`, { duration: 3000 })
       } else {
         toast.success('已解除绑定', { duration: 2000 })
       }
+      if (res.data?.deployId) onDeployTriggered?.(res.data.deployId)
       onUpdate()
     } catch {
       setSelectedId(prev)

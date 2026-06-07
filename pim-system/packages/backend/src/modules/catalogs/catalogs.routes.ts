@@ -165,13 +165,13 @@ catalogsApp.patch('/:id', async (c) => {
 
     log.info({ catalogId: id, updates: dto }, '更新图册')
 
-    const updated = await catalogsService.update(id, dto as any)
+    const { row: updated, deployId } = await catalogsService.update(id, dto as any)
 
     if (!updated) {
       return fail(c, '图册不存在', 404)
     }
 
-    return ok(c, updated, '图册更新成功')
+    return ok(c, { ...updated, deployId }, '图册更新成功')
   } catch (error) {
     if (error instanceof AppError) {
       return fail(c, error.message, error.status as any)
@@ -197,13 +197,13 @@ catalogsApp.delete('/:id', async (c) => {
 
     log.info({ catalogId: id }, '删除图册')
 
-    const deleted = await catalogsService.softDelete(id)
+    const { row: deleted, deployId } = await catalogsService.softDelete(id)
 
     if (!deleted) {
       return fail(c, '图册不存在', 404)
     }
 
-    return ok(c, { id, status: 'deleted' }, '图册已删除')
+    return ok(c, { id, status: 'deleted', deployId }, '图册已删除')
   } catch (error) {
     return serverError(c, error)
   }

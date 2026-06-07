@@ -263,6 +263,9 @@ export const distributions = pgTable('distributions', {
   status: varchar('status', { length: 20 }).notNull().default('active'),
   publicUrl: text('public_url'),
   operator: varchar('operator', { length: 50 }).default('XP'),
+  showCustomerName: boolean('show_customer_name').default(false),
+  r2Path: text('r2_path'),
+  publishedAt: timestamp('published_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 })
@@ -278,3 +281,21 @@ export const distributionSkuPrices = pgTable('distribution_sku_prices', {
 }, (table) => ({
   uniq: unique().on(table.distributionId, table.skuId),
 }))
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// sync_logs — R2 同步日志
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export const syncLogs = pgTable('sync_logs', {
+  id: uuid('id').primaryKey().defaultRandom().notNull(),
+  trigger: varchar('trigger', { length: 20 }).notNull(),
+  totalScanned: integer('total_scanned').default(0),
+  newCount: integer('new_count').default(0),
+  updatedCount: integer('updated_count').default(0),
+  skippedCount: integer('skipped_count').default(0),
+  failedCount: integer('failed_count').default(0),
+  status: varchar('status', { length: 20 }).notNull(),
+  errorMessage: text('error_message'),
+  startedAt: timestamp('started_at', { withTimezone: true }).notNull(),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
+})

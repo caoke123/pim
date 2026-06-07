@@ -4,13 +4,13 @@ import {
   Plus, Trash2, FileText, Send, FolderOpen, Eye,
   Folder, Package, Image as ImageIcon, TrendingUp, MoreHorizontal,
   ChevronLeft, ChevronRight, X, Link2,
-  Wifi, BatteryMedium, Signal, Loader2,
+  Wifi, BatteryMedium, Signal, Loader2, AlertTriangle,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useThemeStore } from '@/stores/useThemeStore'
 import { CatalogDrawer as CatalogDrawerComponent } from '@/components/CatalogDrawer'
 
-const API_BASE = 'http://localhost:8000/api/v1'
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000') + '/api/v1'
 const ECATALOG_BASE = import.meta.env.VITE_ECATALOG_BASE_URL || `${window.location.protocol}//${window.location.hostname}:3010`
 const PAGE_SIZE = 12
 
@@ -28,21 +28,62 @@ const spring = { type: 'spring' as const, stiffness: 300, damping: 30, mass: 0.8
 // More Menu
 // ═══════════════════════════════════════════════════════════════════
 
-function MoreMenu({ onDelete }: { onDelete: () => void }) {
+function MoreMenu({ catalogId, onDeleted }: { catalogId: string; onDeleted: (deployId: string | null) => void }) {
   const [open, setOpen] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
-    function onClick(e: MouseEvent) { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
+    function onClick(e: MouseEvent) { if (ref.current && !ref.current.contains(e.target as Node)) { setOpen(false); setShowConfirm(false) } }
     document.addEventListener('mousedown', onClick); return () => document.removeEventListener('mousedown', onClick)
   }, [])
+
+  async function handleDelete() {
+    setDeleting(true)
+    try {
+      const r = await fetch(`${API_BASE}/catalogs/${catalogId}`, { method: 'DELETE' })
+      const j = await r.json()
+      if (j.success) {
+        toast.success(j.data?.deployId ? '已删除，链接即将失效' : '已删除')
+        onDeleted(j.data?.deployId ?? null)
+      }
+    } catch { toast.error('删除失败') } finally { setDeleting(false); setOpen(false) }
+  }
+
   return (
     <div ref={ref} className="relative">
-      <button onClick={() => setOpen(!open)} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 active:scale-95 transition-all"><MoreHorizontal className="w-4 h-4" /></button>
+      <button onClick={() => { setOpen(!open); setShowConfirm(false) }} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 active:scale-95 transition-all"><MoreHorizontal className="w-4 h-4" /></button>
       <AnimatePresence>
         {open && (
           <motion.div initial={{ opacity: 0, scale: 0.95, y: -4 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: -4 }} transition={{ duration: 0.15 }}
-            className="absolute right-0 bottom-full mb-1 w-36 bg-white rounded-2xl shadow-[0_20px_40px_rgba(15,23,42,0.10)] border border-gray-100 py-1 z-20">
-            <button onClick={() => { setOpen(false); onDelete() }} className="w-full flex items-center gap-2 px-3 py-2 text-[13px] text-gray-600 hover:bg-red-50 hover:text-red-600 transition-colors rounded-lg mx-1"><Trash2 className="w-3.5 h-3.5" />删除图册</button>
+            className="absolute right-0 bottom-full mb-1 bg-white rounded-2xl shadow-[0_20px_40px_rgba(15,23,42,0.10)] border border-gray-100 overflow-hidden z-20" style={{ minWidth: 224 }}>
+            {!showConfirm ? (
+              <button onClick={() => setShowConfirm(true)}
+                className="w-full text-left px-3.5 py-2.5 text-[13px] font-semibold text-rose-600 hover:bg-rose-50 flex items-center gap-2 transition-colors">
+                <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                删除图册
+              </button>
+            ) : (
+              <div className="p-3 space-y-2 bg-rose-50/50">
+                <div className="flex items-start gap-1 text-[11px] font-bold text-rose-700">
+                  <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                  <span>确认删除该图册？</span>
+                </div>
+                <p className="text-[10px] text-gray-500 leading-tight">删除后，已发布的公开链接将失效。此操作不可撤销。</p>
+                <div className="grid grid-cols-2 gap-1.5 pt-1">
+                  <button disabled={deleting} onClick={handleDelete}
+                    className="w-full py-1.5 text-[10px] font-bold rounded bg-rose-600 hover:bg-rose-700 text-white text-center shadow-sm disabled:opacity-60 flex items-center justify-center gap-1">
+                    {deleting && <Loader2 className="w-3 h-3 animate-spin" />}
+                    {deleting ? '删除中…' : '确认删除'}
+                  </button>
+                  <button onClick={() => { setShowConfirm(false); setOpen(false) }}
+                    className="w-full py-1.5 text-[10px] font-semibold rounded bg-white hover:bg-gray-50 text-gray-600 border border-gray-200 text-center">
+                    取消
+                  </button>
+                </div>
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -54,8 +95,8 @@ function MoreMenu({ onDelete }: { onDelete: () => void }) {
 // Phone Mockup Card
 // ═══════════════════════════════════════════════════════════════════
 
-function PhoneCard({ catalog, onView, onPublish, onCopyLink, onDelete, publishing, deploying }: {
-  catalog: Catalog; onView: () => void; onPublish: () => void; onCopyLink: () => void; onDelete: () => void; publishing: string | null; deploying: boolean
+function PhoneCard({ catalog, onView, onPublish, onCopyLink, onDeleted, publishing, deploying }: {
+  catalog: Catalog; onView: () => void; onPublish: () => void; onCopyLink: () => void; onDeleted: (deployId: string | null) => void; publishing: string | null; deploying: boolean
 }) {
   const isPublished = catalog.status === 'published'
   const statusLabel = isPublished ? '已发布' : '未发布'
@@ -120,7 +161,7 @@ function PhoneCard({ catalog, onView, onPublish, onCopyLink, onDelete, publishin
             </button>
           )}
           <div className="flex items-center justify-center">
-            <MoreMenu onDelete={onDelete} />
+            <MoreMenu catalogId={catalog.id} onDeleted={onDeleted} />
           </div>
         </div>
       </div>
@@ -183,8 +224,6 @@ export default function CatalogPage() {
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [createOpen, setCreateOpen] = useState(false)
-  const [deleteTarget, setDeleteTarget] = useState<Catalog | null>(null)
-  const [confirmOpen, setConfirmOpen] = useState(false)
   const [drawerCatalog, setDrawerCatalog] = useState<Catalog | null>(null)
   const [newName, setNewName] = useState('')
   const [creating, setCreating] = useState(false)
@@ -216,15 +255,6 @@ export default function CatalogPage() {
     } catch { toast.error('创建失败') } finally { setCreating(false) }
   }
 
-  const handleDelete = async () => {
-    if (!deleteTarget) return
-    try {
-      const r = await fetch(`${API_BASE}/catalogs/${deleteTarget.id}`, { method: 'DELETE' })
-      if ((await r.json()).success) { toast.success('已删除'); setDeleteTarget(null); setConfirmOpen(false); setPage(1); fetchData() }
-    } catch { toast.error('删除失败') }
-  }
-
-  /** 轮询 Cloudflare Pages 部署状态, 完成后移除构建中间态 */
   const pollDeployStatus = async (catalogId: string, deployId: string) => {
     const maxAttempts = 30 // 最多等待 2.5 分钟
     for (let i = 0; i < maxAttempts; i++) {
@@ -250,7 +280,7 @@ export default function CatalogPage() {
   }
 
   return (
-    <div className="min-h-screen" style={{ background: '#F8FAFC' }}>
+    <div className="flex-1 overflow-y-auto" style={{ background: '#F8FAFC' }}>
       <div className="max-w-[1600px] mx-auto px-8 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
@@ -313,12 +343,12 @@ export default function CatalogPage() {
                       const j = await r.json()
                       if (j.success) {
                         toast.success(j.data?.deployId ? '已提交构建部署，约20秒后生效' : '发布成功')
-                        fetchData()
-                        // 进入构建中间态
+                        // 先设置构建中间态（同步），避免 fetchData 异步期间按钮闪现
                         if (j.data?.deployId) {
                           setDeployingIds(prev => new Set(prev).add(c.id))
                           pollDeployStatus(c.id, j.data.deployId)
                         }
+                        fetchData()
                       } else {
                         toast.error(j.message ?? '发布失败')
                       }
@@ -343,7 +373,13 @@ export default function CatalogPage() {
                       toast.error(url, { duration: 8000 })
                     }
                   }}
-                  onDelete={() => { setDeleteTarget(c); setConfirmOpen(true) }}
+                  onDeleted={(deployId) => {
+                    if (deployId) {
+                      setDeployingIds(prev => new Set(prev).add(c.id))
+                      pollDeployStatus(c.id, deployId)
+                    }
+                    setPage(1); fetchData()
+                  }}
                   publishing={publishing}
                   deploying={deployingIds.has(c.id)}
                 />
@@ -370,23 +406,14 @@ export default function CatalogPage() {
 
       <CreateModal open={createOpen} onClose={() => { setCreateOpen(false); setNewName('') }} name={newName} onChangeName={setNewName} creating={creating} onCreate={handleCreate} />
 
-      <CatalogDrawerComponent open={!!drawerCatalog} catalog={drawerCatalog} onClose={() => setDrawerCatalog(null)} onRefresh={fetchData} />
+      <CatalogDrawerComponent open={!!drawerCatalog} catalog={drawerCatalog} onClose={() => setDrawerCatalog(null)} onRefresh={fetchData}
+        onDeployTriggered={(deployId) => {
+          if (!drawerCatalog) return
+          setDeployingIds(prev => new Set(prev).add(drawerCatalog.id))
+          pollDeployStatus(drawerCatalog.id, deployId)
+        }}
+      />
 
-      <AnimatePresence>
-        {confirmOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <motion.div className="absolute inset-0 bg-black/20" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setConfirmOpen(false)} />
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative bg-white rounded-2xl p-6 w-[400px] shadow-[0_24px_64px_rgba(15,23,42,0.12)]">
-              <h3 className="text-[16px] font-semibold text-gray-900 mb-2">确认删除</h3>
-              <p className="text-[14px] text-gray-500 mb-6">删除「{deleteTarget?.name}」后，已发布的公开链接将失效。此操作不可撤销。</p>
-              <div className="flex gap-3 justify-end">
-                <button onClick={() => setConfirmOpen(false)} className="h-9 px-4 rounded-xl text-[13px] font-medium text-gray-500 hover:bg-gray-50">取消</button>
-                <button onClick={handleDelete} className="h-9 px-4 rounded-xl text-[13px] font-medium text-white bg-red-500 hover:bg-red-600">确认删除</button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </div>
   )
 }

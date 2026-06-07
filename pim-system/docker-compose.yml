@@ -4,7 +4,7 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: pim_db
+      POSTGRES_DB: sorter
       POSTGRES_USER: pim_user
       POSTGRES_PASSWORD: pim_pass
     ports:
@@ -13,7 +13,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U pim_user -d pim_db"]
+      test: ["CMD-SHELL", "pg_isready -U pim_user -d sorter"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -36,7 +36,7 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql://pim_user:pim_pass@postgres:5432/pim_db
+      DATABASE_URL: postgresql://pim_user:pim_pass@postgres:5432/sorter
       REDIS_URL: redis://redis:6379
     depends_on:
       postgres:
